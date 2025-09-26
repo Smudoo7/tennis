@@ -1,19 +1,32 @@
 
 // netlify/functions/state.js
+// Patched: uses automatic Netlify context if available, otherwise falls back to manual siteID+token.
 const { getStore } = require("@netlify/blobs");
 
 const STORE_NAME = "tennis-results";
 const headersJSON = { "content-type": "application/json" };
-
 const ok = (obj) => ({ statusCode: 200, headers: headersJSON, body: JSON.stringify(obj) });
 const err = (statusCode, message) => ({ statusCode, headers: headersJSON, body: JSON.stringify({ error: message }) });
+
+function getStoreSafe() {
+  const base = { name: STORE_NAME, consistency: "strong" };
+  // If the Netlify runtime hasn't injected Blobs context, we pass siteID+token manually.
+  // Set these in Site → Settings → Environment variables.
+  const siteID = process.env.SITE_ID || process.env.NETLIFY_SITE_ID;
+  const token = process.env.NETLIFY_API_TOKEN || process.env.NETLIFY_AUTH_TOKEN;
+  if (siteID && token) {
+    base.siteID = siteID;
+    base.token = token;
+  }
+  return getStore(base);
+}
 
 exports.handler = async (event) => {
   console.log("[state] incoming", { method: event.httpMethod, qs: event.queryStringParameters });
   try {
     const tId = (event.queryStringParameters && (event.queryStringParameters.t || event.queryStringParameters.T)) || "default";
     const method = event.httpMethod || "GET";
-    const store = getStore({ name: STORE_NAME, consistency: "strong" });
+    const store = getStoreSafe();
     const KEY = `${tId}/state.json`;
 
     const expected = process.env.ADMIN_TOKEN;
