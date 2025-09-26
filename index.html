@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>TCO Doppelmaster 2025 – Live-Dashboard</title>
+<title>TCO Doppelmaster 2025 – Live-Dashboard + Admin</title>
 <style>
   :root{
     --bg: #0f1220;
@@ -22,7 +22,7 @@
   html,body{height:100%}
   body{
     margin:0;
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, "Noto Sans";
     background: radial-gradient(1200px 800px at 20% -10%, #1b2146 0%, #12162a 50%, #0d1020 100%);
     color:var(--text);
     line-height:1.45;
@@ -39,9 +39,9 @@
   .grid{display:grid; gap:16px}
   .grid.cols-3{grid-template-columns: repeat(3, minmax(0,1fr));}
   .grid.cols-2{grid-template-columns: repeat(2, minmax(0,1fr));}
+  .grid.cols-4{grid-template-columns: repeat(4, minmax(0,1fr));}
   @media (max-width: 1024px){
-    .grid.cols-3{grid-template-columns: 1fr;}
-    .grid.cols-2{grid-template-columns: 1fr;}
+    .grid.cols-3,.grid.cols-2,.grid.cols-4{grid-template-columns: 1fr;}
   }
   .tabs{display:flex; gap:8px; flex-wrap:wrap; margin:16px 0}
   .tab{
@@ -78,9 +78,10 @@
   }
   .tile .label{font-size:12px; color:var(--muted)}
   .tile .value{font-size:22px; font-weight:700}
-  input[type="number"]{
-    width:60px; background:#0e1431; border:1px solid #2b3568; color:var(--text); border-radius:10px; padding:6px 8px;
+  input[type="number"], input[type="text"], select{
+    background:#0e1431; border:1px solid #2b3568; color:var(--text); border-radius:10px; padding:6px 8px;
   }
+  input[type="number"]{ width:70px; }
   .btn{
     appearance:none; border:none; border-radius:12px; padding:10px 14px; cursor:pointer;
     color:#0b1225; background:linear-gradient(135deg, var(--accent), var(--accent-2)); font-weight:700;
@@ -103,6 +104,9 @@
   .sync{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; border:1px solid #2b3568; background:#0f142a; color:var(--muted); font-size:12px}
   .sync.ok{color:#10b981}
   .sync.err{color:#f87171}
+  .label{font-size:12px; color:var(--muted);}
+  .admin-grid{display:grid; grid-template-columns: 1fr 1fr; gap:16px}
+  @media (max-width: 900px){ .admin-grid{grid-template-columns: 1fr;} }
 </style>
 </head>
 <body>
@@ -111,11 +115,11 @@
       <div class="row" style="justify-content:space-between; align-items:center">
         <div>
           <h1>🏆 TCO Doppelmaster 2025 – Gruppenphase & KO</h1>
-          <div class="sub">4 Plätze · Gruppe A auf Platz 1–2 · Gruppe B auf Platz 3–4 · A5 hat nicht das erste Spiel</div>
+          <div class="sub">4 Plätze · Gruppe A (Platz 1–2) · Gruppe B (Platz 3–4)</div>
         </div>
         <div class="row">
           <span id="syncBadge" class="sync">🔄 Verbinden…</span>
-          <button class="btn" id="downloadJson">Ergebnisse exportieren</button>
+          <button class="btn" id="downloadJson">Export</button>
           <button class="btn ghost" id="resetAll">Lokal zurücksetzen</button>
         </div>
       </div>
@@ -124,6 +128,7 @@
         <button class="tab active" data-tab="plan">Spielplan</button>
         <button class="tab" data-tab="tables">Live‑Tabellen</button>
         <button class="tab" data-tab="ko">KO‑Phase</button>
+        <button class="tab" data-tab="admin">Admin</button>
       </div>
     </div>
   </header>
@@ -134,7 +139,7 @@
         <h2>🗓️ Spielplan (Gruppenphase)</h2>
         <span class="pill">Server‑Sync + lokaler Cache</span>
       </div>
-      <div class="hint">Trage Sätze und (optional) Spiele ein. Ranking: Siege → Satzdiff → Spieldiff → Direktvergleich.</div>
+      <div class="hint">Ranking: Siege → Satzdiff → Spieldiff → Direktvergleich.</div>
       <div id="schedule"></div>
     </section>
 
@@ -158,41 +163,47 @@
       <div id="koBracket" class="bracket"></div>
     </section>
 
-    <div class="footer">Hinweis: Speicherung zentral über Netlify Functions (Blobs). Lokaler Fallback via Browser‑Cache.</div>
+    <section id="admin" class="card" style="display:none">
+      <div class="row" style="justify-content:space-between">
+        <h2>🛠️ Admin – Teams & Einstellungen</h2>
+        <span class="pill">Änderungen speichern → Spielplan wird neu generiert</span>
+      </div>
+      <div class="admin-grid">
+        <div class="card">
+          <h3>Gruppe A</h3>
+          <div class="row"><span class="label">Anzahl Teams</span><input type="number" id="countA" min="2" max="12"></div>
+          <div id="namesA"></div>
+          <div class="row" style="margin-top:8px">
+            <input type="checkbox" id="avoidFirstA5">
+            <label for="avoidFirstA5" class="label">Vermeide, dass letztes Team in Gruppe A im ersten Spiel steht</label>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Gruppe B</h3>
+          <div class="row"><span class="label">Anzahl Teams</span><input type="number" id="countB" min="2" max="12"></div>
+          <div id="namesB"></div>
+        </div>
+      </div>
+      <div class="row" style="justify-content:flex-end; margin-top:12px">
+        <button class="btn ghost" id="adminCancel">Verwerfen</button>
+        <button class="btn" id="adminSave">Speichern & neu planen</button>
+      </div>
+    </section>
+
+    <div class="footer">Zentrale Speicherung via Netlify Functions (Blobs). Lokaler Cache als Fallback.</div>
   </main>
 
 <script>
-// ===== Konfiguration – anpassen =====
+// ===== Config =====
 const TOURNAMENT_NAME = "TCO Doppelmaster 2025";
 const TOURNAMENT_ID = "TCO%20Doppelmaster%202025"; // URL-encodet
 const API = `/.netlify/functions/state?t=${TOURNAMENT_ID}`;
-// Optional: wenn du ein Admin-Token gesetzt hast (Netlify ENV ADMIN_TOKEN)
-const ADMIN_TOKEN = "admin"; // z.B. "mein-geheimes-token"
+// Optionales Admin-Token (wenn gesetzt)
+const ADMIN_TOKEN = ""; // z.B. "mein-secret"
 const USE_LOCAL_CACHE = true;
 
-// ===== Gruppen & Spielplan =====
-const GROUPS = { "A": ["A1","A2","A3","A4","A5"], "B": ["B1","B2","B3","B4"] };
-const SCHEDULE = [
- [1, 'Runde 1', 'Platz 1', 'A3', 'A4', 'A'],
- [2, 'Runde 1', 'Platz 2', 'A2', 'A5', 'A'],
- [3, 'Runde 1', 'Platz 3', 'B1', 'B4', 'B'],
- [4, 'Runde 1', 'Platz 4', 'B2', 'B3', 'B'],
- [5, 'Runde 2', 'Platz 1', 'A1', 'A5', 'A'],
- [6, 'Runde 2', 'Platz 2', 'A2', 'A3', 'A'],
- [7, 'Runde 2', 'Platz 3', 'B1', 'B3', 'B'],
- [8, 'Runde 2', 'Platz 4', 'B4', 'B2', 'B'],
- [9, 'Runde 3', 'Platz 1', 'A1', 'A4', 'A'],
- [10, 'Runde 3', 'Platz 2', 'A5', 'A3', 'A'],
- [11, 'Runde 3', 'Platz 3', 'B1', 'B2', 'B'],
- [12, 'Runde 3', 'Platz 4', 'B3', 'B4', 'B'],
- [13, 'Runde 4', 'Platz 1', 'A1', 'A3', 'A'],
- [14, 'Runde 4', 'Platz 2', 'A4', 'A2', 'A'],
- [15, 'Runde 5', 'Platz 1', 'A1', 'A2', 'A'],
- [16, 'Runde 5', 'Platz 2', 'A4', 'A5', 'A']
-];
-
-// ===== Helper: Server Sync (Netlify Blobs) =====
-const KEY_LOCAL = "tennis_dashboard_cache_v2";
+// ===== Helpers: Server Sync =====
+const KEY_LOCAL = "tco_doppelmaster_state_v3";
 const syncBadge = document.getElementById("syncBadge");
 function setSyncStatus(text, cls=""){ syncBadge.textContent = text; syncBadge.className = "sync " + cls; }
 
@@ -208,31 +219,40 @@ async function serverLoad() {
     return null;
   }
 }
-
-async function serverSaveFull(state) {
+async function serverPut(fullState){
   const headers = { "content-type": "application/json" };
   if(ADMIN_TOKEN) headers["x-admin-token"] = ADMIN_TOKEN;
-  const res = await fetch(API, { method: "PUT", headers, body: JSON.stringify(state) });
+  const res = await fetch(API, { method: "PUT", headers, body: JSON.stringify(fullState) });
   if(!res.ok) throw new Error("PUT failed");
 }
-async function serverPatch(pathArray, value) {
+async function serverPatch(pathArray, value){
   const headers = { "content-type": "application/json" };
   if(ADMIN_TOKEN) headers["x-admin-token"] = ADMIN_TOKEN;
   const res = await fetch(API, { method: "PATCH", headers, body: JSON.stringify({ path: pathArray, value }) });
   if(!res.ok) throw new Error("PATCH failed");
 }
 
-// ===== Lokaler Cache (Optional) =====
+// ===== Local cache =====
 function loadLocal(){ try { return JSON.parse(localStorage.getItem(KEY_LOCAL)) || {}; } catch { return {}; } }
 function saveLocal(s){ try { localStorage.setItem(KEY_LOCAL, JSON.stringify(s)); } catch {} }
 function resetLocal(){ localStorage.removeItem(KEY_LOCAL); }
 
 // ===== App State =====
-let state = {}; // { matches: { g1:{...}, ... }, KO:{...} }
+// structure: {config:{groups:{A:[...],B:[...]}, avoidFirstA5:bool}, schedule:[...], matches:{g1:{...}}, KO:{...} }
+let state = {};
+
+function defaultConfig(){
+  return {
+    groups: { A: ["A1","A2","A3","A4","A5"], B: ["B1","B2","B3","B4"] },
+    avoidFirstA5: true
+  };
+}
 
 function ensureState(){
+  if(!state.config) state.config = defaultConfig();
+  if(!state.schedule) state.schedule = generateSchedule(state.config);
   if(!state.matches) state.matches = {};
-  for(const [id] of SCHEDULE){
+  for(const [id] of state.schedule){
     if(!state.matches["g"+id]) state.matches["g"+id] = {sets1:"", sets2:"", games1:"", games2:""};
   }
   if(!state.KO) state.KO = {
@@ -243,30 +263,102 @@ function ensureState(){
   };
 }
 
-function isNumber(x){ return x !== "" && !isNaN(Number(x)); }
+// ===== Round-Robin Generator (circle method) =====
+function roundRobin(teams){
+  const list = teams.slice();
+  if(list.length % 2 === 1) list.push("BYE");
+  const n = list.length;
+  const rounds = n-1;
+  const half = n/2;
+  const out = [];
+  const arr = list.slice();
+  for(let r=0; r<rounds; r++){
+    const pairings = [];
+    for(let i=0; i<half; i++){
+      const t1 = arr[i], t2 = arr[n-1-i];
+      if(t1!=="BYE" && t2!=="BYE") pairings.push([t1,t2]);
+    }
+    out.push(pairings);
+    // rotate (keep arr[0] fixed)
+    const fixed = arr[0];
+    const rest = arr.slice(1);
+    rest.unshift(rest.pop());
+    arr.splice(0, arr.length, fixed, ...rest);
+  }
+  return out; // array of rounds, each list of [t1,t2]
+}
 
-// ===== Rendering =====
+function generateSchedule(config){
+  const A = config.groups.A.slice();
+  const B = config.groups.B.slice();
+  // build RR per group
+  const rrA = roundRobin(A);
+  const rrB = roundRobin(B);
+  // optional constraint: avoid that last team of A is in first match of Runde 1 Platz 1
+  // We'll swap first pairing if needed.
+  if(config.avoidFirstA5 && rrA.length>0 && rrA[0].length>0){
+    const lastA = A[A.length-1];
+    const firstPair = rrA[0][0];
+    if(firstPair.includes(lastA)){
+      // find another pair in round 1 to swap with
+      for(let i=1;i<rrA[0].length;i++){
+        if(!rrA[0][i].includes(lastA)){
+          const tmp = rrA[0][0];
+          rrA[0][0] = rrA[0][i];
+          rrA[0][i] = tmp;
+          break;
+        }
+      }
+    }
+  }
+
+  // Now interleave to global schedule with 4 courts per "Runde"
+  const totalRounds = Math.max(rrA.length, rrB.length);
+  const schedule = []; // [id, 'Runde X', 'Platz Y', t1,t2, 'A'|'B']
+  let id = 1;
+  for(let r=0; r<totalRounds; r++){
+    const aPairs = rrA[r] || [];
+    const bPairs = rrB[r] || [];
+    // place up to 2 A pairs on Platz 1 & 2
+    for(let i=0;i<2;i++){
+      if(aPairs[i]){
+        schedule.push([id++, `Runde ${r+1}`, `Platz ${i+1}`, aPairs[i][0], aPairs[i][1], 'A']);
+      }
+    }
+    // place up to 2 B pairs on Platz 3 & 4
+    for(let i=0;i<2;i++){
+      if(bPairs[i]){
+        schedule.push([id++, `Runde ${r+1}`, `Platz ${i+3}`, bPairs[i][0], bPairs[i][1], 'B']);
+      }
+    }
+  }
+  return schedule;
+}
+
+// ===== UI Rendering =====
 function renderSchedule(){
   const wrap = document.getElementById("schedule");
   wrap.innerHTML = "";
+  const sched = state.schedule;
   let currentRound = "";
   let groupWrap = null;
-  SCHEDULE.forEach(([id, round, court, t1, t2, grp], idx) => {
+  sched.forEach(([id, round, court, t1, t2, grp], idx) => {
     if(round !== currentRound){
       currentRound = round;
       const r = document.createElement("div");
       r.className = "card";
       r.style.margin = "12px 0";
+      const startId = id;
       r.innerHTML = `<div class="row" style="justify-content:space-between; align-items:center">
-        <div class="row"><h3 style="margin:0">${round}</h3><span class="badge">Parallel: 4 Plätze</span></div>
-        <span class="muted">Spiele ${id}–${Math.min(id+3, SCHEDULE.length)}</span>
+        <div class="row"><h3 style="margin:0">${round}</h3><span class="badge">Parallel: bis zu 4 Plätze</span></div>
+        <span class="muted">ab Spiel #${startId}</span>
       </div>`;
       groupWrap = document.createElement("div");
       groupWrap.className = "grid cols-2";
       r.appendChild(groupWrap);
       wrap.appendChild(r);
     }
-    const m = state.matches["g"+id];
+    const m = state.matches["g"+id] || {sets1:"", sets2:"", games1:"", games2:""};
     const card = document.createElement("div");
     card.className = "match-card";
     card.innerHTML = `
@@ -296,11 +388,14 @@ function renderSchedule(){
     groupWrap.appendChild(card);
 
     function bind(idStr, key){
-      document.getElementById(idStr).addEventListener("input", async (e)=>{
+      const el = document.getElementById(idStr);
+      if(!el) return;
+      el.addEventListener("input", async (e)=>{
+        state.matches["g"+id] = state.matches["g"+id] || {sets1:"", sets2:"", games1:"", games2:""};
         state.matches["g"+id][key] = e.target.value;
         if(USE_LOCAL_CACHE) saveLocal(state);
         try {
-          await serverPatch(["matches", "g"+id], state.matches["g"+id]);
+          await serverPatch(["matches","g"+id], state.matches["g"+id]);
           setSyncStatus("✅ Synchronisiert", "ok");
         } catch {
           setSyncStatus("⚠️ Nicht synchronisiert (lokal zwischengespeichert)", "err");
@@ -317,45 +412,39 @@ function renderSchedule(){
     document.getElementById(`clear_${id}`).addEventListener("click", async ()=>{
       state.matches["g"+id] = {sets1:"", sets2:"", games1:"", games2:""};
       if(USE_LOCAL_CACHE) saveLocal(state);
-      try {
-        await serverPatch(["matches", "g"+id], state.matches["g"+id]);
-        setSyncStatus("✅ Synchronisiert", "ok");
-      } catch {
-        setSyncStatus("⚠️ Nicht synchronisiert (lokal zwischengespeichert)", "err");
-      }
-      renderSchedule();
-      updateTables();
-      renderKO();
-      updateKPIs();
+      try{ await serverPatch(["matches","g"+id], state.matches["g"+id]); setSyncStatus("✅ Synchronisiert","ok"); }
+      catch{ setSyncStatus("⚠️ Nicht synchronisiert (lokal zwischengespeichert)","err"); }
+      renderSchedule(); updateTables(); renderKO(); updateKPIs();
     });
   });
 }
 
-function computeStandings(){
-  const standings = { "A": {}, "B": {} };
-  for(const g of Object.keys(GROUPS)){
-    for(const t of GROUPS[g]) standings[g][t] = {Team:t, GP:0, W:0, L:0, SetsPlus:0, SetsMinus:0, GamesPlus:0, GamesMinus:0, Pts:0};
-  }
-  const h2h = { "A": {}, "B": {} };
-  for(const grp of Object.keys(h2h)){ for(const t of GROUPS[grp]) h2h[grp][t] = {}; }
+function isNumber(x){ return x!=="" && !isNaN(Number(x)); }
 
-  SCHEDULE.forEach(([id, round, court, t1, t2, grp]) => {
-    const r = state.matches["g"+id];
+function computeStandings(){
+  const groups = state.config.groups;
+  const standings = { A:{}, B:{} };
+  for(const g of ["A","B"]){
+    for(const t of groups[g]) standings[g][t] = {Team:t, GP:0, W:0, L:0, SetsPlus:0, SetsMinus:0, GamesPlus:0, GamesMinus:0, Pts:0};
+  }
+  const h2h = {A:{}, B:{}}; for(const g of ["A","B"]){ for(const t of groups[g]) h2h[g][t] = {}; }
+
+  state.schedule.forEach(([id, round, court, t1, t2, grp])=>{
+    const r = state.matches["g"+id] || {};
     const s1 = Number(r.sets1), s2 = Number(r.sets2);
     const g1 = Number(r.games1), g2 = Number(r.games2);
     const haveSets = isNumber(r.sets1) && isNumber(r.sets2);
     const haveGames = isNumber(r.games1) && isNumber(r.games2);
     if(!haveSets) return;
-    standings[grp][t1].GP += 1;
-    standings[grp][t2].GP += 1;
+    standings[grp][t1].GP++; standings[grp][t2].GP++;
     standings[grp][t1].SetsPlus += s1; standings[grp][t1].SetsMinus += s2;
     standings[grp][t2].SetsPlus += s2; standings[grp][t2].SetsMinus += s1;
     if(haveGames){
       standings[grp][t1].GamesPlus += g1; standings[grp][t1].GamesMinus += g2;
       standings[grp][t2].GamesPlus += g2; standings[grp][t2].GamesMinus += g1;
     }
-    if(s1 > s2){ standings[grp][t1].W++; standings[grp][t2].L++; standings[grp][t1].Pts++; }
-    else if(s2 > s1){ standings[grp][t2].W++; standings[grp][t1].L++; standings[grp][t2].Pts++; }
+    if(s1>s2){ standings[grp][t1].W++; standings[grp][t2].L++; standings[grp][t1].Pts++; }
+    else if(s2>s1){ standings[grp][t2].W++; standings[grp][t1].L++; standings[grp][t2].Pts++; }
     const winner = s1===s2 ? null : (s1>s2 ? t1 : t2);
     const loser  = s1===s2 ? null : (s1>s2 ? t2 : t1);
     if(winner && loser){ h2h[grp][winner][loser] = (h2h[grp][winner][loser] || 0) + 1; }
@@ -411,14 +500,13 @@ function updateTables(){
 }
 
 function allGroupFinished(grp){
-  const needed = SCHEDULE.filter(s => s[5]===grp).length;
+  const total = state.schedule.filter(s=>s[5]===grp).length;
   let have = 0;
-  for(const [id, round, court, t1, t2, g] of SCHEDULE){
-    if(g!==grp) continue;
-    const r = state.matches["g"+id];
-    if(isNumber(r.sets1) && isNumber(r.sets2)) have++;
-  }
-  return have === needed;
+  state.schedule.forEach(([id, , , , , g])=>{
+    const r = state.matches["g"+id] || {};
+    if(g===grp && isNumber(r.sets1) && isNumber(r.sets2)) have++;
+  });
+  return have === total && total>0;
 }
 
 function renderKO(){
@@ -430,7 +518,6 @@ function renderKO(){
   const {A, B} = computeStandings();
   const A1 = A[0]?.Team, A2 = A[1]?.Team;
   const B1 = B[0]?.Team, B2 = B[1]?.Team;
-
   const K = state.KO;
   if(ready){
     K.SF1.t1 = A1; K.SF1.t2 = B2;
@@ -442,7 +529,6 @@ function renderKO(){
     if(w1 && w2){ K.F.t1 = w1; K.F.t2 = w2; }
     if(l1 && l2){ K.P3.t1 = l1; K.P3.t2 = l2; }
   }
-
   function matchCard(key, title){
     const m = K[key];
     const el = document.createElement("div");
@@ -469,21 +555,20 @@ function renderKO(){
       if(s1) s1.addEventListener("input", async (e)=>{
         state.KO[key].s1 = e.target.value;
         if(USE_LOCAL_CACHE) saveLocal(state);
-        try{ await serverPatch(["KO", key], state.KO[key]); setSyncStatus("✅ Synchronisiert", "ok"); }
-        catch{ setSyncStatus("⚠️ Nicht synchronisiert (lokal zwischengespeichert)", "err"); }
+        try{ await serverPatch(["KO", key], state.KO[key]); setSyncStatus("✅ Synchronisiert","ok"); }
+        catch{ setSyncStatus("⚠️ Nicht synchronisiert (lokal zwischengespeichert)","err"); }
         renderKO();
       });
       if(s2) s2.addEventListener("input", async (e)=>{
         state.KO[key].s2 = e.target.value;
         if(USE_LOCAL_CACHE) saveLocal(state);
-        try{ await serverPatch(["KO", key], state.KO[key]); setSyncStatus("✅ Synchronisiert", "ok"); }
-        catch{ setSyncStatus("⚠️ Nicht synchronisiert (lokal zwischengespeichert)", "err"); }
+        try{ await serverPatch(["KO", key], state.KO[key]); setSyncStatus("✅ Synchronisiert","ok"); }
+        catch{ setSyncStatus("⚠️ Nicht synchronisiert (lokal zwischengespeichert)","err"); }
         renderKO();
       });
     }, 0);
     return el;
   }
-
   const col1 = document.createElement("div");
   const col2 = document.createElement("div");
   const col3 = document.createElement("div");
@@ -495,22 +580,115 @@ function renderKO(){
 }
 
 function updateKPIs(){
-  const played = Object.keys(state.matches).filter(k=>{
-    const r = state.matches[k]; return isNumber(r.sets1)&&isNumber(r.sets2);
+  const played = Object.keys(state.matches||{}).filter(k=>{
+    const r = state.matches[k]; return isNumber(r?.sets1)&&isNumber(r?.sets2);
   }).length;
-  const total = SCHEDULE.length;
+  const total = state.schedule.length;
   const doneA = allGroupFinished("A");
   const doneB = allGroupFinished("B");
   const kpis = document.getElementById("kpis");
   kpis.innerHTML = `
     <div class="tile"><div class="label">Turnier</div><div class="value">${TOURNAMENT_NAME}</div></div>
+    <div class="tile"><div class="label">Teams A/B</div><div class="value">${state.config.groups.A.length} / ${state.config.groups.B.length}</div></div>
     <div class="tile"><div class="label">Gespielte Spiele</div><div class="value">${played}/${total}</div></div>
     <div class="tile"><div class="label">Gruppe A – Status</div><div class="value">${doneA? "abgeschlossen" : "läuft"}</div></div>
     <div class="tile"><div class="label">Gruppe B – Status</div><div class="value">${doneB? "abgeschlossen" : "läuft"}</div></div>
   `;
 }
 
-// Tabs
+// ===== Admin UI =====
+function renderAdmin(){
+  const cfg = state.config;
+  const countA = document.getElementById("countA");
+  const countB = document.getElementById("countB");
+  const namesA = document.getElementById("namesA");
+  const namesB = document.getElementById("namesB");
+  const avoid = document.getElementById("avoidFirstA5");
+  countA.value = cfg.groups.A.length;
+  countB.value = cfg.groups.B.length;
+  avoid.checked = !!cfg.avoidFirstA5;
+
+  function renderNames(container, arr, prefix){
+    container.innerHTML = "";
+    arr.forEach((name, idx)=>{
+      const row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML = `<span class="label" style="width:80px">${prefix}${idx+1}</span>
+        <input type="text" value="${name}" id="${prefix}${idx+1}_name" style="flex:1; min-width:200px">`;
+      container.appendChild(row);
+    });
+  }
+  renderNames(namesA, cfg.groups.A, "A");
+  renderNames(namesB, cfg.groups.B, "B");
+
+  function adjustCount(which, newCount){
+    const list = cfg.groups[which];
+    const current = list.length;
+    if(newCount>current){
+      for(let i=current; i<newCount; i++){ list.push(`${which}${i+1}`); }
+    }else if(newCount<current){
+      list.splice(newCount);
+    }
+  }
+
+  countA.oninput = ()=>{
+    const n = Math.max(2, Math.min(12, Number(countA.value)||2));
+    adjustCount("A", n);
+    renderAdmin();
+  };
+  countB.oninput = ()=>{
+    const n = Math.max(2, Math.min(12, Number(countB.value)||2));
+    adjustCount("B", n);
+    renderAdmin();
+  };
+
+  document.getElementById("adminCancel").onclick = ()=>{
+    renderAdmin();
+  };
+
+  document.getElementById("adminSave").onclick = async ()=>{
+    // read names back
+    const newA = [];
+    const newB = [];
+    for(let i=0;i<cfg.groups.A.length;i++){
+      const v = document.getElementById(`A${i+1}_name`).value.trim() || `A${i+1}`;
+      newA.push(v);
+    }
+    for(let i=0;i<cfg.groups.B.length;i++){
+      const v = document.getElementById(`B${i+1}_name`).value.trim() || `B${i+1}`;
+      newB.push(v);
+    }
+    cfg.groups.A = newA;
+    cfg.groups.B = newB;
+    cfg.avoidFirstA5 = document.getElementById("avoidFirstA5").checked;
+
+    // regenerate schedule
+    const newSchedule = generateSchedule(cfg);
+    // reset matches mapping to match new schedule id space
+    const newMatches = {};
+    for(const [id] of newSchedule){
+      newMatches["g"+id] = state.matches["g"+id] || {sets1:"", sets2:"", games1:"", games2:""};
+    }
+    state.schedule = newSchedule;
+    state.matches = newMatches;
+    // reset KO
+    state.KO = { SF1:{t1:"",t2:"",s1:"",s2:""}, SF2:{t1:"",t2:"",s1:"",s2:""}, F:{t1:"",t2:"",s1:"",s2:""}, P3:{t1:"",t2:"",s1:"",s2:""} };
+
+    if(USE_LOCAL_CACHE) saveLocal(state);
+    try{
+      await serverPatch(["config"], cfg);
+      await serverPatch(["schedule"], newSchedule);
+      await serverPatch(["matches"], newMatches);
+      await serverPatch(["KO"], state.KO);
+      setSyncStatus("✅ Synchronisiert", "ok");
+    }catch{
+      setSyncStatus("⚠️ Nicht synchronisiert (lokal zwischengespeichert)","err");
+    }
+    renderSchedule(); updateTables(); renderKO(); updateKPIs(); renderAdmin();
+  };
+}
+
+// ===== Tabs =====
 document.querySelectorAll(".tab").forEach(t=>{
   t.addEventListener("click", ()=>{
     document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
@@ -525,7 +703,7 @@ document.getElementById("downloadJson").addEventListener("click", ()=>{
   const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url; a.download = "tco_doppelmaster_2025_results.json"; a.click();
+  a.href = url; a.download = "tco_doppelmaster_state.json"; a.click();
   setTimeout(()=>URL.revokeObjectURL(url), 2000);
 });
 document.getElementById("resetAll").addEventListener("click", ()=>{
@@ -534,22 +712,19 @@ document.getElementById("resetAll").addEventListener("click", ()=>{
   }
 });
 
-// Initial boot: server → local fallback
+// Boot
 (async function boot(){
   const fromServer = await serverLoad();
-  if(fromServer){
-    state = fromServer;
-  } else if(USE_LOCAL_CACHE){
-    state = loadLocal();
-  } else {
-    state = {};
-  }
+  if(fromServer){ state = fromServer; }
+  else if(USE_LOCAL_CACHE){ state = loadLocal(); }
+  else { state = {}; }
   ensureState();
   if(USE_LOCAL_CACHE) saveLocal(state);
   renderSchedule();
   updateTables();
   renderKO();
   updateKPIs();
+  renderAdmin();
 })();
 </script>
 </body>
