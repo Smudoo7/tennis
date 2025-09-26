@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>TCO Doppelmaster 2025 – Dashboard (Admin mit Token-Overlay)</title>
+<title>TCO Doppelmaster 2025 – Public Viewer (stacked stats + QR)</title>
 <style>
   :root{
     --bg: #0f1220;
@@ -39,16 +39,9 @@
   .sub{color:var(--muted); font-size:12px}
   .grid{display:grid; gap:12px}
   .grid.cols-2{grid-template-columns: repeat(2, minmax(0,1fr));}
-  .grid.cols-3{grid-template-columns: repeat(3, minmax(0,1fr));}
-  .grid.cols-4{grid-template-columns: repeat(4, minmax(0,1fr));}
-  @media (max-width: 1024px){ .grid.cols-3,.grid.cols-4{grid-template-columns: repeat(2, 1fr);} }
-  @media (max-width: 720px){ .grid.cols-2,.grid.cols-3,.grid.cols-4{grid-template-columns: 1fr;} }
+  @media (max-width: 720px){ .grid.cols-2{grid-template-columns: 1fr;} }
 
-  .tabs{display:flex; gap:8px; flex-wrap:wrap; margin:16px 0}
-  .tab{ padding:10px 14px; border:1px solid #26305f; border-radius:999px; cursor:pointer;
-    color:var(--muted); background:#0f142a; transition:.2s; }
-  .tab.active{color:#0c1326; background:linear-gradient(135deg, var(--accent), var(--accent-2)); border-color:transparent; font-weight:600}
-
+  .tabs{display:none}
   .card{
     background: linear-gradient(180deg, rgba(255,255,255,.02), transparent) , var(--card);
     border:1px solid #222a52;
@@ -61,6 +54,7 @@
   .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
   .badge{ padding:4px 8px; font-size:12px; border-radius:999px; border:1px solid #2d3666; color:#9fb0e0; background:#0f142a;}
   .pill{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:#0f142a; border:1px solid #2b3568; color:#c7ceef; font-size:12px}
+  .hint{font-size:12px; color:var(--muted)}
 
   table{width:100%; border-collapse:collapse; font-size:14px; overflow:hidden; border-radius:12px}
   thead th{ text-align:left; font-weight:600; color:#aab2d8; background:#0f142a; border-bottom:1px solid #26305f; padding:10px 8px;}
@@ -75,106 +69,76 @@
   @media (max-width: 900px){ .kpi{grid-template-columns: repeat(2, 1fr);} }
   @media (max-width: 520px){ .kpi{grid-template-columns: 1fr;} }
 
-  input[type="number"], input[type="text"], input[type="password"], select{
-    background:#0e1431; border:1px solid #2b3568; color:var(--text); border-radius:12px; padding:10px 12px; font-size:16px;
-  }
-  input[type="number"]{ width:88px; }
-  input[type="password"]{ width:200px; }
-  .btn{ appearance:none; border:none; border-radius:14px; padding:10px 14px; cursor:pointer;
-    color:#0b1225; background:linear-gradient(135deg, var(--accent), var(--accent-2)); font-weight:800;
-    box-shadow: 0 8px 20px rgba(96,165,250,.25); font-size:16px; }
-  .btn.ghost{background:#0f142a; color:var(--text); border:1px solid #273063; box-shadow:none}
-
+  /* Match cards */
   .match-card{border:1px solid #2d376b; border-radius:16px; padding:12px; background:#0f142a}
   .match-card .title{color:#a8b2e2; font-size:12px; margin-bottom:8px}
-  .team-row{display:flex; align-items:center; justify-content:space-between; gap:8px; margin:6px 0}
-  .team-row .name{font-weight:700}
-  .team-row input{width:100px}
-
-  .hint{font-size:12px; color:var(--muted)}
-  .sync{display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; border:1px solid #2b3568; background:#0f142a; color:var(--muted); font-size:12px}
-  .sync.ok{color:#10b981}
-  .sync.err{color:#f87171}
-  .label{font-size:12px; color:var(--muted);}
-
-  .accordion{border:1px solid #26305f; border-radius:12px; overflow:hidden; margin:10px 0; background:#0f142a}
-  .acc-head{display:flex; justify-content:space-between; align-items:center; padding:12px 14px; cursor:pointer}
-  .acc-body{display:none; padding:10px 12px}
-  .acc-open .acc-body{display:block}
-  .acc-open .acc-head .chev{transform: rotate(180deg)}
-  .chev{transition: .2s transform;}
-
-  .bottom-nav{
-    position: fixed; left:0; right:0; bottom:0;
-    background: rgba(12,15,30,.9);
-    border-top:1px solid #20264a;
-    display:grid; grid-template-columns: repeat(4, 1fr);
-    padding:8px 8px calc(8px + var(--safe-b));
-    z-index:20; backdrop-filter: blur(8px);
+  .team-row{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin:8px 0}
+  .team-row .name{font-weight:800; min-width:56px}
+  .team-row .stats{display:flex; gap:16px}
+  /* Stacked stats for public view */
+  .statcol{display:flex; flex-direction:column; gap:6px; min-width:90px}
+  .stat{background:#0e1431; border:1px solid #2b3568; border-radius:12px; padding:8px 10px}
+  .stat .label{display:block; font-size:11px; color:#9aa6d9; margin-bottom:4px}
+  .stat .value{font-weight:800; font-size:16px}
+  @media (max-width:480px){
+    .team-row{flex-direction:row; align-items:flex-start}
+    .team-row .name{min-width:auto}
   }
-  .bottom-nav button{
-    background:none; border:none; color:#aeb5d9; font-size:12px; padding:8px 6px; border-radius:12px;
-  }
-  .bottom-nav button.active{ color:#0b1225; background:linear-gradient(135deg, var(--accent), var(--accent-2)); font-weight:800; }
-  @media (min-width: 980px){ .bottom-nav{ display:none } }
-  @media (max-width: 979px){ .tabs{ display:none } }
 
-  main{ padding-bottom: calc(64px + var(--safe-b)); }
+  /* KO */
+  .ko-title{color:#a8b2e2; font-size:12px; margin-bottom:8px}
 
-  /* Token Overlay */
+  /* Bottom nav (optional – hidden in public) */
+  .bottom-nav{ display:none }
+
+  main{ padding-bottom: calc(16px + var(--safe-b)); }
+
+  /* QR Overlay */
   .overlay{
-    position: fixed; inset:0; background: rgba(5,7,15,.82); backdrop-filter: blur(6px);
+    position: fixed; inset:0; background: rgba(5,7,15,.8); backdrop-filter: blur(6px);
     display:none; align-items:center; justify-content:center; z-index:50;
   }
   .overlay.open{ display:flex }
-  .dlg{
+  .qr-card{
     width:min(520px, 92vw);
     background: linear-gradient(180deg, rgba(255,255,255,.03), transparent), #121734;
-    border:1px solid #263266; border-radius:18px; padding:18px; box-shadow: var(--shadow);
+    border:1px solid #263266; border-radius:18px; padding:16px; box-shadow: var(--shadow);
   }
-  .dlg h3{ margin:0 0 8px }
-  .row.spread{ justify-content:space-between }
-  .token-row{ display:flex; gap:8px; }
-  .token-row input{ flex:1 }
-  .muted-small{ font-size:12px; color:#a6add1 }
+  .qr-grid{ display:grid; grid-template-columns: 1fr; gap:12px; justify-items:center }
+  .qr-grid img{ width: min(360px, 70vw); aspect-ratio:1; border-radius:12px; background:#fff }
+  .qr-row{ display:flex; gap:8px; width:100% }
+  .qr-row input{ flex:1 }
+  .sync{display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; border:1px solid #2b3568; background:#0f142a; color:#c7ceef; font-size:12px}
 </style>
 </head>
 <body>
   <header>
     <div class="container">
-      <div class="row spread">
+      <div class="row" style="justify-content:space-between; align-items:center">
         <div>
-          <h1>🏆 TCO Doppelmaster 2025</h1>
+          <h1>🏆 TCO Doppelmaster 2025 <span class="badge">Zuschauermodus</span></h1>
           <div class="sub">Gruppenphase & KO · 4 Plätze · A auf 1–2 · B auf 3–4</div>
         </div>
         <div class="row" style="gap:8px">
           <span id="syncBadge" class="sync">🔄 Verbinden…</span>
-          <input type="password" id="adminTokenInput" placeholder="Admin‑Token" aria-label="Admin Token" />
-          <button class="btn ghost" id="saveTokenBtn" title="Lokal speichern">Token</button>
+          <button class="btn ghost" id="qrBtn" title="QR teilen">QR teilen</button>
           <button class="btn" id="downloadJson" title="Export JSON">Export</button>
         </div>
       </div>
       <div class="kpi" id="kpis"></div>
-      <div class="tabs" id="tabs">
-        <button class="tab active" data-tab="plan">Spielplan</button>
-        <button class="tab" data-tab="tables">Tabellen</button>
-        <button class="tab" data-tab="ko">KO</button>
-        <button class="tab" data-tab="admin">Admin</button>
-      </div>
     </div>
   </header>
 
   <main class="container">
     <section id="plan" class="card">
-      <div class="row spread">
+      <div class="row" style="justify-content:space-between">
         <h2>🗓️ Spielplan</h2>
-        <span class="pill">Server‑Sync nur mit Admin‑Token • lokaler Cache aktiv</span>
+        <span class="pill">Nur Lesen • Öffentlich</span>
       </div>
-      <div class="hint">Ranking: Siege → Satzdiff → Spieldiff → Direktvergleich.</div>
       <div id="schedule"></div>
     </section>
 
-    <section id="tables" class="card" style="display:none">
+    <section id="tables" class="card">
       <h2>📊 Live‑Tabellen</h2>
       <div class="grid cols-2">
         <div>
@@ -188,171 +152,56 @@
       </div>
     </section>
 
-    <section id="ko" class="card" style="display:none">
+    <section id="ko" class="card">
       <h2>🥇 KO‑Phase</h2>
-      <div class="hint">Wird automatisch befüllt, sobald beide Gruppen fertig sind.</div>
       <div id="koBracket" class="grid cols-2"></div>
-    </section>
-
-    <section id="admin" class="card" style="display:none">
-      <div class="row spread">
-        <h2>🛠️ Admin</h2>
-        <span class="pill">Speichern → Spielplan neu generiert</span>
-      </div>
-      <div class="grid cols-2">
-        <div class="card">
-          <h3>Gruppe A</h3>
-          <div class="row"><span class="label">Anzahl Teams</span><input type="number" id="countA" min="2" max="12"></div>
-          <div id="namesA"></div>
-          <div class="row" style="margin-top:8px">
-            <input type="checkbox" id="avoidFirstA5">
-            <label for="avoidFirstA5" class="label">Vermeide, dass letztes Team in Gruppe A im ersten Spiel steht</label>
-          </div>
-        </div>
-        <div class="card">
-          <h3>Gruppe B</h3>
-          <div class="row"><span class="label">Anzahl Teams</span><input type="number" id="countB" min="2" max="12"></div>
-          <div id="namesB"></div>
-        </div>
-      </div>
-      <div class="row" style="justify-content:flex-end; margin-top:12px; gap:10px">
-        <button class="btn ghost" id="adminCancel">Verwerfen</button>
-        <button class="btn" id="adminSave">Speichern & neu planen</button>
-      </div>
-      <div class="hint">Server‑Speichern nur mit gültigem Admin‑Token.</div>
     </section>
   </main>
 
-  <nav class="bottom-nav" aria-label="Navigation">
-    <button data-tab="plan" class="active">Spielplan</button>
-    <button data-tab="tables">Tabellen</button>
-    <button data-tab="ko">KO</button>
-    <button data-tab="admin">Admin</button>
-  </nav>
-
-  <!-- First-run Admin Token overlay -->
-  <div id="tokenOverlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="tokTitle">
-    <div class="dlg">
-      <h3 id="tokTitle">🔐 Admin-Zugriff</h3>
-      <p class="muted-small">Gib dein <b>Admin‑Token</b> ein, um Ergebnisse & Einstellungen zentral zu speichern. Du kannst auch „Später“ wählen und erst einmal im Nur‑Lesen‑Modus starten.</p>
-      <div class="token-row">
-        <input type="password" id="ovToken" placeholder="Admin‑Token">
-        <button class="btn ghost" id="toggleOv">👁︎</button>
-      </div>
-      <div class="row" style="justify-content:flex-end; margin-top:10px; gap:8px">
-        <button class="btn ghost" id="skipOv">Später</button>
-        <button class="btn" id="saveOv">Weiter</button>
+  <div id="overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
+    <div class="qr-card">
+      <div class="qr-grid">
+        <h3 id="qrTitle" style="margin:0">🔗 Teilen / QR-Code</h3>
+        <img id="qrImg" alt="QR-Code zum Öffnen">
+        <div class="qr-row">
+          <input type="text" id="shareLink" readonly>
+          <button class="btn" id="copyBtn">Kopieren</button>
+          <button class="btn ghost" id="closeOverlay">Schließen</button>
+        </div>
+        <div class="hint">Tipp: Web Share (Android/iOS) – wenn verfügbar – nutzt den nativen Share‑Dialog.</div>
       </div>
     </div>
   </div>
 
 <script>
-// ===== URL mode handling =====
-const params = new URLSearchParams(location.search);
-const VIEW_PUBLIC = (params.get("view") === "public"); // this page: focus on non-public flow
-
-// ===== Keys / Flags =====
-const KEY_TOKEN = "tco_admin_token";
-const KEY_PROMPT_SHOWN = "tco_token_prompt_shown_v1";
-
-// ===== Elements =====
-const tokenOverlay = document.getElementById("tokenOverlay");
-const ovInput = document.getElementById("ovToken");
-const ovToggle = document.getElementById("toggleOv");
-const ovSkip = document.getElementById("skipOv");
-const ovSave = document.getElementById("saveOv");
-const tokenInput = document.getElementById("adminTokenInput");
-const saveTokenBtn = document.getElementById("saveTokenBtn");
-const syncBadge = document.getElementById("syncBadge");
-
-// ===== Admin-Token state =====
-let ADMIN_TOKEN = localStorage.getItem(KEY_TOKEN) || "";
-
-// First-run overlay logic (non-public only)
-function maybeShowTokenOverlay(reason){
-  if(VIEW_PUBLIC) return; // never in public
-  const already = localStorage.getItem(KEY_PROMPT_SHOWN) === "1";
-  if(!already || reason === "ON_DEMAND"){
-    tokenOverlay.classList.add("open");
-    ovInput.value = ADMIN_TOKEN || "";
-  }
-}
-function closeTokenOverlay(){
-  tokenOverlay.classList.remove("open");
-  localStorage.setItem(KEY_PROMPT_SHOWN, "1");
-}
-ovToggle.addEventListener("click", ()=>{
-  ovInput.type = (ovInput.type === "password") ? "text" : "password";
-});
-ovSave.addEventListener("click", ()=>{
-  ADMIN_TOKEN = ovInput.value.trim();
-  localStorage.setItem(KEY_TOKEN, ADMIN_TOKEN);
-  tokenInput.value = ADMIN_TOKEN;
-  setSyncStatus(ADMIN_TOKEN? "🔓 Admin‑Token gesetzt – Server‑Speichern aktiv" : "🔒 Kein Admin‑Token – keine Serverspeicherung", ADMIN_TOKEN? "ok": "err");
-  closeTokenOverlay();
-});
-ovSkip.addEventListener("click", ()=>{
-  setSyncStatus("🔒 Nur Lesen – Du kannst das Token später setzen", ""); 
-  closeTokenOverlay();
-});
-
-// Header token save
-tokenInput.value = ADMIN_TOKEN;
-saveTokenBtn.addEventListener("click", ()=>{
-  ADMIN_TOKEN = tokenInput.value.trim();
-  localStorage.setItem(KEY_TOKEN, ADMIN_TOKEN);
-  setSyncStatus(ADMIN_TOKEN? "🔓 Admin‑Token gesetzt – Server‑Speichern aktiv" : "🔒 Kein Admin‑Token – keine Serverspeicherung", ADMIN_TOKEN? "ok": "err");
-});
-
-// ===== Sync helpers =====
-function setSyncStatus(text, cls=""){ syncBadge.textContent = text; syncBadge.className = "sync " + cls; }
-
+// Public-only page (no token, no admin)
 const TOURNAMENT_NAME = "TCO Doppelmaster 2025";
 const TOURNAMENT_ID = "TCO%20Doppelmaster%202025";
 const API = `/.netlify/functions/state?t=${TOURNAMENT_ID}`;
+const KEY_LOCAL = "tco_doppelmaster_state_public_viewer_stacked";
 const USE_LOCAL_CACHE = true;
-const KEY_LOCAL = "tco_doppelmaster_state_adminOverlay";
 
+const syncBadge = document.getElementById("syncBadge");
+function setSyncStatus(text){ syncBadge.textContent = text; }
+
+// Fetch
 async function serverLoad() {
   try {
     const res = await fetch(API, { method: "GET" });
     if(!res.ok) throw new Error("GET failed");
     const data = await res.json();
-    setSyncStatus(ADMIN_TOKEN ? "✅ Verbunden (Token bereit)" : "ℹ️ Verbunden (nur Lesen – kein Token)", ADMIN_TOKEN ? "ok" : "");
+    setSyncStatus("✅ Verbunden");
     return data || {};
   } catch(e) {
-    setSyncStatus("⚠️ Offline/Serverfehler", "err");
+    setSyncStatus("⚠️ Offline/Serverfehler – lokaler Cache");
     return null;
   }
 }
-function withAuthHeaders(baseHeaders = {}){
-  if(!ADMIN_TOKEN) throw new Error("NO_ADMIN_TOKEN");
-  return { ...baseHeaders, "x-admin-token": ADMIN_TOKEN };
-}
-async function serverPatch(pathArray, value){
-  try{
-    const headers = withAuthHeaders({ "content-type": "application/json" });
-    const res = await fetch(API, { method: "PATCH", headers, body: JSON.stringify({ path: pathArray, value }) });
-    if(!res.ok) throw new Error("PATCH failed");
-    setSyncStatus("✅ Synchronisiert", "ok");
-  }catch(ex){
-    if(String(ex).includes("NO_ADMIN_TOKEN")){
-      setSyncStatus("🔒 Kein Admin‑Token – lokal gespeichert, nicht am Server", "err");
-      // On-demand prompt if user tried to write
-      maybeShowTokenOverlay("ON_DEMAND");
-    }else{
-      setSyncStatus("⚠️ Nicht synchronisiert (Serverfehler) – lokal zwischengespeichert", "err");
-    }
-    throw ex;
-  }
-}
 
-// ===== Local cache =====
 function loadLocal(){ try { return JSON.parse(localStorage.getItem(KEY_LOCAL)) || {}; } catch { return {}; } }
 function saveLocal(s){ try { localStorage.setItem(KEY_LOCAL, JSON.stringify(s)); } catch {} }
-function resetLocal(){ localStorage.removeItem(KEY_LOCAL); }
 
-// ===== App State & Generators (same logic as vorherige Versionen) =====
+// Default state
 let state = {};
 function defaultConfig(){ return { groups: { A: ["A1","A2","A3","A4","A5"], B: ["B1","B2","B3","B4"] }, avoidFirstA5: true }; }
 function ensureState(){
@@ -365,6 +214,7 @@ function ensureState(){
   if(!state.KO) state.KO = { SF1:{t1:"A1", t2:"B2", s1:"", s2:""}, SF2:{t1:"B1", t2:"A2", s1:"", s2:""}, F:{t1:"", t2:"", s1:"", s2:""}, P3:{t1:"", t2:"", s1:"", s2:""} };
 }
 
+// Round-robin & schedule
 function roundRobin(teams){
   const list = teams.slice();
   if(list.length % 2 === 1) list.push("BYE");
@@ -403,12 +253,11 @@ function generateSchedule(config){
   return schedule;
 }
 
-// ===== Rendering, standings, KO (gleich wie zuvor) =====
+// Render schedule with stacked displays
 function renderSchedule(){
   const wrap = document.getElementById("schedule");
   wrap.innerHTML = "";
   const sched = state.schedule;
-
   const rounds = {};
   for(const m of sched){ const r = m[1]; if(!rounds[r]) rounds[r] = []; rounds[r].push(m); }
   Object.keys(rounds).forEach((round,i)=>{
@@ -424,50 +273,29 @@ function renderSchedule(){
       const m = state.matches["g"+id] || {sets1:"", sets2:"", games1:"", games2:""};
       const card = document.createElement("div");
       card.className = "match-card";
+      const s1 = m.sets1 || "—", g1 = m.games1 || "—";
+      const s2 = m.sets2 || "—", g2 = m.games2 || "—";
       card.innerHTML = `
         <div class="title">#${id} · ${court} · Gruppe ${grp}</div>
         <div class="team-row">
           <span class="name">${t1}</span>
-          <div class="row">
-            <label class="muted">Sätze</label>
-            <input inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="s1_${id}" value="${m.sets1}">
-            <label class="muted">Spiele</label>
-            <input inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="g1_${id}" value="${m.games1}">
+          <div class="stats">
+            <div class="statcol">
+              <div class="stat"><span class="label">Sätze</span><div class="value">${s1}</div></div>
+              <div class="stat"><span class="label">Spiele</span><div class="value">${g1}</div></div>
+            </div>
           </div>
         </div>
         <div class="team-row">
           <span class="name">${t2}</span>
-          <div class="row">
-            <label class="muted">Sätze</label>
-            <input inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="s2_${id}" value="${m.sets2}">
-            <label class="muted">Spiele</label>
-            <input inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="g2_${id}" value="${m.games2}">
+          <div class="stats">
+            <div class="statcol">
+              <div class="stat"><span class="label">Sätze</span><div class="value">${s2}</div></div>
+              <div class="stat"><span class="label">Spiele</span><div class="value">${g2}</div></div>
+            </div>
           </div>
-        </div>
-        <div class="row" style="justify-content:flex-end; gap:8px">
-          <button class="btn ghost" id="clear_${id}">Löschen</button>
         </div>`;
       rwrap.appendChild(card);
-
-      function bind(idStr, key){
-        const el = document.getElementById(idStr);
-        if(!el) return;
-        el.addEventListener("input", async (e)=>{
-          state.matches["g"+id] = state.matches["g"+id] || {sets1:"", sets2:"", games1:"", games2:""};
-          state.matches["g"+id][key] = e.target.value;
-          if(USE_LOCAL_CACHE) saveLocal(state);
-          try { await serverPatch(["matches","g"+id], state.matches["g"+id]); }
-          catch { /* status set in serverPatch */ }
-          updateTables(); renderKO(); updateKPIs();
-        });
-      }
-      bind(`s1_${id}`, "sets1"); bind(`s2_${id}`, "sets2"); bind(`g1_${id}`, "games1"); bind(`g2_${id}`, "games2");
-      document.getElementById(`clear_${id}`).addEventListener("click", async ()=>{
-        state.matches["g"+id] = {sets1:"", sets2:"", games1:"", games2:""};
-        if(USE_LOCAL_CACHE) saveLocal(state);
-        try{ await serverPatch(["matches","g"+id], state.matches["g"+id]); } catch {}
-        renderSchedule(); updateTables(); renderKO(); updateKPIs();
-      });
     });
   });
 }
@@ -490,12 +318,12 @@ function computeStandings(){
     standings[grp][t1].GP++; standings[grp][t2].GP++;
     standings[grp][t1].SetsPlus += s1; standings[grp][t1].SetsMinus += s2;
     standings[grp][t2].SetsPlus += s2; standings[grp][t2].SetsMinus += s1;
-    if(haveGames){ standings[grp][t1].GamesPlus += g1; standings[grp][t1].GamesMinus += g2; standings[grp][t2].GamesPlus += g2; standings[grp][t2].GamesMinus += g1; }
+    if(haveGames){
+      standings[grp][t1].GamesPlus += g1; standings[grp][t1].GamesMinus += g2;
+      standings[grp][t2].GamesPlus += g2; standings[grp][t2].GamesMinus += g1;
+    }
     if(s1>s2){ standings[grp][t1].W++; standings[grp][t2].L++; standings[grp][t1].Pts++; }
     else if(s2>s1){ standings[grp][t2].W++; standings[grp][t1].L++; standings[grp][t2].Pts++; }
-    const winner = s1===s2 ? null : (s1>s2 ? t1 : t2);
-    const loser  = s1===s2 ? null : (s1>s2 ? t2 : t1);
-    if(winner && loser){ h2h[grp][winner][loser] = (h2h[grp][winner][loser] || 0) + 1; }
   });
   function sortGroup(grp){
     const arr = Object.values(standings[grp]);
@@ -503,9 +331,6 @@ function computeStandings(){
       const p = b.Pts - a.Pts; if(p) return p;
       const sd = (b.SetsPlus-b.SetsMinus) - (a.SetsPlus-a.SetsMinus); if(sd) return sd;
       const gd = (b.GamesPlus-b.GamesMinus) - (a.GamesPlus-a.GamesMinus); if(gd) return gd;
-      const h = ((a.Team in h2h[grp] && b.Team in h2h[grp][a.Team]) ? h2h[grp][a.Team][b.Team] : 0)
-              - ((b.Team in h2h[grp] && a.Team in h2h[grp][b.Team]) ? h2h[grp][b.Team][a.Team] : 0);
-      if(h) return -h;
       return a.Team.localeCompare(b.Team);
     });
     arr.forEach((r,i)=> r.Rang = i+1);
@@ -513,6 +338,7 @@ function computeStandings(){
   }
   return {A: sortGroup("A"), B: sortGroup("B")};
 }
+
 function tableHTML(rows){
   return `
   <table>
@@ -543,163 +369,89 @@ function updateTables(){
   document.getElementById("tableA").innerHTML = tableHTML(A);
   document.getElementById("tableB").innerHTML = tableHTML(B);
 }
-function allGroupFinished(grp){
-  const total = state.schedule.filter(s=>s[5]===grp).length;
-  let have = 0;
-  state.schedule.forEach(([id, , , , , g])=>{
-    const r = state.matches["g"+id] || {};
-    if(g===grp && isNumber(r.sets1) && isNumber(r.sets2)) have++;
-  });
-  return have === total && total>0;
-}
+
+// KO bracket (stacked display)
 function renderKO(){
   const br = document.getElementById("koBracket");
   br.innerHTML = "";
-  const finishedA = allGroupFinished("A");
-  const finishedB = allGroupFinished("B");
-  const ready = finishedA && finishedB;
   const {A, B} = computeStandings();
   const A1 = A[0]?.Team, A2 = A[1]?.Team;
   const B1 = B[0]?.Team, B2 = B[1]?.Team;
   const K = state.KO;
-  if(ready){
-    K.SF1.t1 = A1; K.SF1.t2 = B2;
-    K.SF2.t1 = B1; K.SF2.t2 = A2;
-    const winner = (m)=> (m.s1===""||m.s2==="") ? null : (Number(m.s1)>Number(m.s2)? m.t1 : m.t2);
-    const loser  = (m)=> (m.s1===""||m.s2==="") ? null : (Number(m.s1)>Number(m.s2)? m.t2 : m.t1);
-    const w1 = winner(K.SF1), w2 = winner(K.SF2);
-    const l1 = loser(K.SF1), l2 = loser(K.SF2);
-    if(w1 && w2){ K.F.t1 = w1; K.F.t2 = w2; }
-    if(l1 && l2){ K.P3.t1 = l1; K.P3.t2 = l2; }
-  }
-  function matchCard(key, title){
+  // Ensure names adoptable from standings if available
+  if(A1 && B2){ K.SF1.t1 = A1; K.SF1.t2 = B2; }
+  if(B1 && A2){ K.SF2.t1 = B1; K.SF2.t2 = A2; }
+
+  function block(key, title){
     const m = K[key];
     const el = document.createElement("div");
     el.className = "match-card";
     el.innerHTML = `
-      <div class="title">${title}</div>
+      <div class="ko-title">${title}</div>
       <div class="team-row">
         <span class="name">${m.t1 || "—"}</span>
-        <div class="row"><label class="muted">Sätze</label>
-          <input inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="${key}_s1" value="${m.s1}">
+        <div class="stats">
+          <div class="statcol">
+            <div class="stat"><span class="label">Sätze</span><div class="value">${m.s1 || "—"}</div></div>
+          </div>
         </div>
       </div>
       <div class="team-row">
         <span class="name">${m.t2 || "—"}</span>
-        <div class="row"><label class="muted">Sätze</label>
-          <input inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="${key}_s2" value="${m.s2}">
+        <div class="stats">
+          <div class="statcol">
+            <div class="stat"><span class="label">Sätze</span><div class="value">${m.s2 || "—"}</div></div>
+          </div>
         </div>
       </div>
-      <div class="hint">${ready? "Automatisch aus Gruppentabellen befüllt." : "Wartet auf Abschluss der Gruppenphase."}</div>
     `;
-    setTimeout(async ()=>{
-      // Save KO changes (will prompt on demand if no token)
-      const s1 = document.getElementById(`${key}_s1`);
-      const s2 = document.getElementById(`${key}_s2`);
-      if(s1) s1.addEventListener("input", async (e)=>{
-        state.KO[key].s1 = e.target.value;
-        if(USE_LOCAL_CACHE) saveLocal(state);
-        try{ await serverPatch(["KO", key], state.KO[key]); } catch{}
-        renderKO();
-      });
-      if(s2) s2.addEventListener("input", async (e)=>{
-        state.KO[key].s2 = e.target.value;
-        if(USE_LOCAL_CACHE) saveLocal(state);
-        try{ await serverPatch(["KO", key], state.KO[key]); } catch{}
-        renderKO();
-      });
-    }, 0);
     return el;
   }
+
   const col1 = document.createElement("div");
   const col2 = document.createElement("div");
-  col1.appendChild(matchCard("SF1","Halbfinale 1 (A1 vs B2)"));
-  col2.appendChild(matchCard("SF2","Halbfinale 2 (B1 vs A2)"));
-  col1.appendChild(matchCard("P3","Spiel um Platz 3"));
-  col2.appendChild(matchCard("F","Finale"));
+  col1.appendChild(block("SF1","Halbfinale 1 (A1 vs B2)"));
+  col2.appendChild(block("SF2","Halbfinale 2 (B1 vs A2)"));
+  col1.appendChild(block("P3","Spiel um Platz 3"));
+  col2.appendChild(block("F","Finale"));
   br.appendChild(col1); br.appendChild(col2);
 }
 
-function updateKPIs(){
-  const played = Object.keys(state.matches||{}).filter(k=>{
-    const r = state.matches[k]; return isNumber(r?.sets1)&&isNumber(r?.sets2);
-  }).length;
-  const total = state.schedule.length;
-  const doneA = allGroupFinished("A");
-  const doneB = allGroupFinished("B");
-  const kpis = document.getElementById("kpis");
-  kpis.innerHTML = `
-    <div class="tile"><div class="label">Turnier</div><div class="value">${TOURNAMENT_NAME}</div></div>
-    <div class="tile"><div class="label">Teams A/B</div><div class="value">${state.config.groups.A.length} / ${state.config.groups.B.length}</div></div>
-    <div class="tile"><div class="label">Gespielte Spiele</div><div class="value">${played}/${total}</div></div>
-    <div class="tile"><div class="label">A/B Status</div><div class="value">${doneA? "A: fertig" : "A: läuft"} · ${doneB? "B: fertig" : "B: läuft"}</div></div>
-  `;
+// QR share
+const overlay = document.getElementById("overlay");
+const qrBtn = document.getElementById("qrBtn");
+const qrImg = document.getElementById("qrImg");
+const shareLink = document.getElementById("shareLink");
+const closeOverlay = document.getElementById("closeOverlay");
+const copyBtn = document.getElementById("copyBtn");
+
+function buildPublicURL(){
+  const url = new URL(location.href);
+  url.searchParams.set("view", "public");
+  return url.toString();
 }
-
-// Admin UI
-function renderAdmin(){
-  const cfg = state.config;
-  const countA = document.getElementById("countA");
-  const countB = document.getElementById("countB");
-  const namesA = document.getElementById("namesA");
-  const namesB = document.getElementById("namesB");
-  const avoid = document.getElementById("avoidFirstA5");
-  countA.value = cfg.groups.A.length; countB.value = cfg.groups.B.length; avoid.checked = !!cfg.avoidFirstA5;
-
-  function renderNames(container, arr, prefix){
-    container.innerHTML = "";
-    arr.forEach((name, idx)=>{
-      const row = document.createElement("div"); row.className = "row";
-      row.innerHTML = `<span class="label" style="width:72px">${prefix}${idx+1}</span>
-        <input type="text" value="${name}" id="${prefix}${idx+1}_name" style="flex:1; min-width:160px">`;
-      container.appendChild(row);
-    });
+function openQR(){
+  const link = buildPublicURL();
+  shareLink.value = link;
+  const qrURL = "https://api.qrserver.com/v1/create-qr-code/?size=480x480&margin=8&data=" + encodeURIComponent(link);
+  qrImg.src = qrURL;
+  overlay.classList.add("open");
+}
+function closeQR(){ overlay.classList.remove("open"); }
+qrBtn.addEventListener("click", ()=>{
+  const link = buildPublicURL();
+  if(navigator.share){
+    navigator.share({ title: "TCO Doppelmaster 2025 – Live", text: "Live‑Tabelle & Spielplan", url: link })
+      .catch(()=> openQR());
+  }else{
+    openQR();
   }
-  renderNames(namesA, cfg.groups.A, "A"); renderNames(namesB, cfg.groups.B, "B");
-
-  function adjustCount(which, newCount){
-    const list = cfg.groups[which]; const current = list.length;
-    if(newCount>current){ for(let i=current; i<newCount; i++){ list.push(`${which}${i+1}`); } }
-    else if(newCount<current){ list.splice(newCount); }
-  }
-  countA.oninput = ()=>{ const n = Math.max(2, Math.min(12, Number(countA.value)||2)); adjustCount("A", n); renderAdmin(); };
-  countB.oninput = ()=>{ const n = Math.max(2, Math.min(12, Number(countB.value)||2)); adjustCount("B", n); renderAdmin(); };
-
-  document.getElementById("adminCancel").onclick = ()=>{ renderAdmin(); };
-
-  document.getElementById("adminSave").onclick = async ()=>{
-    const newA = [], newB = [];
-    for(let i=0;i<cfg.groups.A.length;i++){ newA.push((document.getElementById(`A${i+1}_name`).value || `A${i+1}`).trim()); }
-    for(let i=0;i<cfg.groups.B.length;i++){ newB.push((document.getElementById(`B${i+1}_name`).value || `B${i+1}`).trim()); }
-    cfg.groups.A = newA; cfg.groups.B = newB; cfg.avoidFirstA5 = document.getElementById("avoidFirstA5").checked;
-
-    const newSchedule = generateSchedule(cfg);
-    const newMatches = {};
-    for(const [id] of newSchedule){ newMatches["g"+id] = state.matches["g"+id] || {sets1:"", sets2:"", games1:"", games2:""}; }
-    state.schedule = newSchedule; state.matches = newMatches;
-    state.KO = { SF1:{t1:"",t2:"",s1:"",s2:""}, SF2:{t1:"",t2:"",s1:"",s2:""}, F:{t1:"",t2:"",s1:"",s2:""}, P3:{t1:"",t2:"",s1:"",s2:""} };
-
-    if(USE_LOCAL_CACHE) saveLocal(state);
-    try{
-      await serverPatch(["config"], cfg);
-      await serverPatch(["schedule"], newSchedule);
-      await serverPatch(["matches"], newMatches);
-      await serverPatch(["KO"], state.KO);
-    }catch{}
-    renderSchedule(); updateTables(); renderKO(); updateKPIs(); renderAdmin();
-  };
-}
-
-// Tabs
-function activateTab(name){
-  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x.dataset.tab===name));
-  document.querySelectorAll(".bottom-nav button").forEach(x=>x.classList.toggle("active", x.dataset.tab===name));
-  document.querySelectorAll("main section").forEach(s=> s.style.display="none");
-  document.getElementById(name).style.display = "";
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
-document.querySelectorAll(".tab").forEach(t=> t.addEventListener("click", ()=> activateTab(t.dataset.tab)));
-document.querySelectorAll(".bottom-nav button").forEach(b=> b.addEventListener("click", ()=> activateTab(b.dataset.tab)));
+});
+closeOverlay.addEventListener("click", closeQR);
+copyBtn.addEventListener("click", async ()=>{
+  try{ await navigator.clipboard.writeText(shareLink.value); copyBtn.textContent = "Kopiert!"; setTimeout(()=>copyBtn.textContent="Kopieren", 1500);}catch{}
+});
+overlay.addEventListener("click", (e)=>{ if(e.target === overlay) closeQR(); });
 
 // Export
 document.getElementById("downloadJson").addEventListener("click", ()=>{
@@ -711,13 +463,10 @@ document.getElementById("downloadJson").addEventListener("click", ()=>{
 
 // Boot
 (async function boot(){
-  // Show first-run overlay (non-public)
-  maybeShowTokenOverlay();
   const data = await serverLoad();
   if(data){ state = data; } else if(USE_LOCAL_CACHE){ state = loadLocal(); } else { state = {}; }
   ensureState(); if(USE_LOCAL_CACHE) saveLocal(state);
-  renderSchedule(); updateTables(); renderKO(); updateKPIs(); renderAdmin();
-  setSyncStatus(ADMIN_TOKEN? "🔓 Admin‑Token gesetzt – Server‑Speichern aktiv" : "🔒 Nur Lesen – ohne Token", ADMIN_TOKEN? "ok" : "");
+  renderSchedule(); updateTables(); renderKO();
 })();
 </script>
 </body>
