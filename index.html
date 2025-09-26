@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>TCO Doppelmaster 2025 – Responsive Dashboard</title>
+<title>TCO Doppelmaster 2025 – Responsive Dashboard (Public‑Mode + QR)</title>
 <style>
   :root{
     --bg: #0f1220;
@@ -48,7 +48,6 @@
   @media (max-width: 1024px){ .grid.cols-3,.grid.cols-4{grid-template-columns: repeat(2, 1fr);} }
   @media (max-width: 720px){ .grid.cols-2,.grid.cols-3,.grid.cols-4{grid-template-columns: 1fr;} }
 
-  /* Tabs (desktop/tablet) */
   .tabs{display:flex; gap:8px; flex-wrap:wrap; margin:16px 0}
   .tab{ padding:10px 14px; border:1px solid #26305f; border-radius:999px; cursor:pointer;
     color:var(--muted); background:#0f142a; transition:.2s; }
@@ -64,14 +63,14 @@
   .card h2{margin:0 0 10px; font-size:18px}
   .muted{color:var(--muted)}
   .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
-  .badge{ padding:4px 8px; font-size:12px; border-radius:999px; border:1px solid #2d3666; color:var(--muted); background:#0f142a;}
+  .badge{ padding:4px 8px; font-size:12px; border-radius:999px; border:1px solid #2d3666; color:#9fb0e0; background:#0f142a;}
+  .pill{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:#0f142a; border:1px solid #2b3568; color:#c7ceef; font-size:12px}
 
   table{width:100%; border-collapse:collapse; font-size:14px; overflow:hidden; border-radius:12px}
   thead th{ text-align:left; font-weight:600; color:#aab2d8; background:#0f142a; border-bottom:1px solid #26305f; padding:10px 8px;}
   tbody td{padding:10px 8px; border-bottom:1px dashed #253060}
   tbody tr:hover{background:#10163a}
 
-  /* KPIs adapt */
   .kpi{display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:12px}
   .kpi .tile{ background: radial-gradient(400px 200px at 120% -20%, rgba(96,165,250,.2), transparent 70%) , #121734;
     border:1px solid #23306a; border-radius:16px; padding:14px; }
@@ -80,19 +79,15 @@
   @media (max-width: 900px){ .kpi{grid-template-columns: repeat(2, 1fr);} }
   @media (max-width: 520px){ .kpi{grid-template-columns: 1fr;} }
 
-  /* Inputs scale with pointer */
   input[type="number"], input[type="text"], input[type="password"], select{
     background:#0e1431; border:1px solid #2b3568; color:var(--text); border-radius:12px; padding:10px 12px; font-size:16px;
   }
-  body.pointer-fine input{ padding:6px 8px; font-size:14px; border-radius:10px }
   input[type="number"]{ width:88px; }
   input[type="password"]{ width:200px; }
-
   .btn{ appearance:none; border:none; border-radius:14px; padding:10px 14px; cursor:pointer;
     color:#0b1225; background:linear-gradient(135deg, var(--accent), var(--accent-2)); font-weight:800;
     box-shadow: 0 8px 20px rgba(96,165,250,.25); font-size:16px; }
   .btn.ghost{background:#0f142a; color:var(--text); border:1px solid #273063; box-shadow:none}
-  body.pointer-fine .btn{ font-size:14px; padding:8px 12px; border-radius:12px }
 
   .match-card{border:1px solid #2d376b; border-radius:16px; padding:12px; background:#0f142a}
   .match-card .title{color:#a8b2e2; font-size:12px; margin-bottom:8px}
@@ -106,7 +101,6 @@
   .sync.err{color:#f87171}
   .label{font-size:12px; color:var(--muted);}
 
-  /* Accordion for rounds (collapsed on small screens) */
   .accordion{border:1px solid #26305f; border-radius:12px; overflow:hidden; margin:10px 0; background:#0f142a}
   .acc-head{display:flex; justify-content:space-between; align-items:center; padding:12px 14px; cursor:pointer}
   .acc-body{display:none; padding:10px 12px}
@@ -114,12 +108,11 @@
   .acc-open .acc-head .chev{transform: rotate(180deg)}
   .chev{transition: .2s transform;}
 
-  /* Bottom nav shows on small, hides on >= 980px */
   .bottom-nav{
     position: fixed; left:0; right:0; bottom:0;
     background: rgba(12,15,30,.9);
     border-top:1px solid #20264a;
-    display:grid; grid-template-columns: repeat(4, 1fr); gap:0;
+    display:grid; grid-template-columns: repeat(4, 1fr);
     padding:8px 8px calc(8px + var(--safe-b));
     z-index:20; backdrop-filter: blur(8px);
   }
@@ -128,9 +121,25 @@
   }
   .bottom-nav button.active{ color:#0b1225; background:linear-gradient(135deg, var(--accent), var(--accent-2)); font-weight:800; }
   @media (min-width: 980px){ .bottom-nav{ display:none } }
-  @media (max-width: 979px){ .tabs{ display:none } } /* show tabs on desktop/tablet */
+  @media (max-width: 979px){ .tabs{ display:none } }
 
   main{ padding-bottom: calc(64px + var(--safe-b)); }
+
+  /* QR Overlay */
+  .overlay{
+    position: fixed; inset:0; background: rgba(5,7,15,.8); backdrop-filter: blur(6px);
+    display:none; align-items:center; justify-content:center; z-index:50;
+  }
+  .overlay.open{ display:flex }
+  .qr-card{
+    width:min(520px, 92vw);
+    background: linear-gradient(180deg, rgba(255,255,255,.03), transparent), #121734;
+    border:1px solid #263266; border-radius:18px; padding:16px; box-shadow: var(--shadow);
+  }
+  .qr-grid{ display:grid; grid-template-columns: 1fr; gap:12px; justify-items:center }
+  .qr-grid img{ width: min(360px, 70vw); aspect-ratio:1; border-radius:12px; background:#fff }
+  .qr-row{ display:flex; gap:8px; width:100% }
+  .qr-row input{ flex:1 }
 </style>
 </head>
 <body>
@@ -138,13 +147,14 @@
     <div class="container">
       <div class="row" style="justify-content:space-between; align-items:center">
         <div>
-          <h1>🏆 TCO Doppelmaster 2025</h1>
+          <h1>🏆 TCO Doppelmaster 2025 <span id="modeBadge" class="badge"></span></h1>
           <div class="sub">Gruppenphase & KO · 4 Plätze · A auf 1–2 · B auf 3–4</div>
         </div>
         <div class="row" style="gap:8px">
           <span id="syncBadge" class="sync">🔄 Verbinden…</span>
           <input type="password" id="adminTokenInput" placeholder="Admin‑Token" aria-label="Admin Token" />
           <button class="btn ghost" id="saveTokenBtn" title="Lokal speichern">Token</button>
+          <button class="btn ghost" id="qrBtn" title="QR teilen">QR teilen</button>
           <button class="btn" id="downloadJson" title="Export JSON">Export</button>
         </div>
       </div>
@@ -224,14 +234,36 @@
     <button data-tab="admin">Admin</button>
   </nav>
 
+  <div id="overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
+    <div class="qr-card">
+      <div class="qr-grid">
+        <h3 id="qrTitle" style="margin:0">🔗 Teilen / QR-Code</h3>
+        <img id="qrImg" alt="QR-Code zum Öffnen">
+        <div class="qr-row">
+          <input type="text" id="shareLink" readonly>
+          <button class="btn" id="copyBtn">Kopieren</button>
+          <button class="btn ghost" id="closeOverlay">Schließen</button>
+        </div>
+        <div class="hint">Tipp: Web Share (Android/iOS) – wenn verfügbar – nutzt den nativen Share‑Dialog.</div>
+      </div>
+    </div>
+  </div>
+
 <script>
-// ===== Device/feature detection: adjust density for touch vs mouse =====
+// ===== URL mode handling =====
+const params = new URLSearchParams(location.search);
+const VIEW_PUBLIC = (params.get("view") === "public");
+const modeBadge = document.getElementById("modeBadge");
+if(VIEW_PUBLIC){
+  modeBadge.textContent = "Zuschauermodus";
+} else {
+  modeBadge.textContent = "Admin/Editor";
+}
+
+// ===== Device density tweak =====
 (function(){
   const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
   document.body.classList.toggle("pointer-fine", !coarse);
-  // iOS standalone padding fix
-  const isStandalone = window.matchMedia && window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
-  if(isStandalone){ document.documentElement.style.setProperty("--safe-b", "0px"); }
 })();
 
 // ===== Config =====
@@ -244,19 +276,26 @@ const USE_LOCAL_CACHE = true;
 const KEY_TOKEN = "tco_admin_token";
 let ADMIN_TOKEN = localStorage.getItem(KEY_TOKEN) || "";
 const tokenInput = document.getElementById("adminTokenInput");
+const tokenBtn = document.getElementById("saveTokenBtn");
 tokenInput.value = ADMIN_TOKEN;
-document.getElementById("saveTokenBtn").addEventListener("click", ()=>{
+tokenBtn.addEventListener("click", ()=>{
   ADMIN_TOKEN = tokenInput.value.trim();
   localStorage.setItem(KEY_TOKEN, ADMIN_TOKEN);
-  if(ADMIN_TOKEN){
-    setSyncStatus("🔓 Admin‑Token gesetzt – Server‑Speichern aktiv", "ok");
-  }else{
-    setSyncStatus("🔒 Kein Admin‑Token – keine Serverspeicherung", "err");
-  }
+  if(ADMIN_TOKEN){ setSyncStatus("🔓 Admin‑Token gesetzt – Server‑Speichern aktiv", "ok"); }
+  else { setSyncStatus("🔒 Kein Admin‑Token – keine Serverspeicherung", "err"); }
 });
 
+// In viewer mode: hide token UI & admin nav/tab
+if(VIEW_PUBLIC){
+  document.getElementById("adminTokenInput").style.display = "none";
+  document.getElementById("saveTokenBtn").style.display = "none";
+  document.querySelector('nav.bottom-nav button[data-tab="admin"]').style.display = "none";
+  document.querySelector('#tabs button[data-tab="admin"]').style.display = "none";
+  document.getElementById("admin").style.display = "none";
+}
+
 // ===== Helpers: Server Sync =====
-const KEY_LOCAL = "tco_doppelmaster_state_responsive";
+const KEY_LOCAL = "tco_doppelmaster_state_publicqr";
 const syncBadge = document.getElementById("syncBadge");
 function setSyncStatus(text, cls=""){ syncBadge.textContent = text; syncBadge.className = "sync " + cls; }
 
@@ -265,19 +304,17 @@ async function serverLoad() {
     const res = await fetch(API, { method: "GET" });
     if(!res.ok) throw new Error("GET failed");
     const data = await res.json();
-    setSyncStatus(ADMIN_TOKEN ? "✅ Verbunden (Token bereit)" : "ℹ️ Verbunden (nur Lesen – kein Token)", ADMIN_TOKEN ? "ok" : "");
+    setSyncStatus((ADMIN_TOKEN && !VIEW_PUBLIC) ? "✅ Verbunden (Token bereit)" : "ℹ️ Verbunden (Nur Lesen)", (ADMIN_TOKEN && !VIEW_PUBLIC) ? "ok" : "");
     return data || {};
   } catch(e) {
     setSyncStatus("⚠️ Offline/Serverfehler", "err");
     return null;
   }
 }
-
 function withAuthHeaders(baseHeaders = {}){
-  if(!ADMIN_TOKEN) throw new Error("NO_ADMIN_TOKEN");
+  if(!ADMIN_TOKEN || VIEW_PUBLIC) throw new Error("NO_ADMIN_TOKEN");
   return { ...baseHeaders, "x-admin-token": ADMIN_TOKEN };
 }
-
 async function serverPatch(pathArray, value){
   const headers = withAuthHeaders({ "content-type": "application/json" });
   const res = await fetch(API, { method: "PATCH", headers, body: JSON.stringify({ path: pathArray, value }) });
@@ -295,7 +332,6 @@ let state = {};
 function defaultConfig(){
   return { groups: { A: ["A1","A2","A3","A4","A5"], B: ["B1","B2","B3","B4"] }, avoidFirstA5: true };
 }
-
 function ensureState(){
   if(!state.config) state.config = defaultConfig();
   if(!state.schedule) state.schedule = generateSchedule(state.config);
@@ -324,7 +360,6 @@ function roundRobin(teams){
   }
   return out;
 }
-
 function generateSchedule(config){
   const A = config.groups.A.slice(), B = config.groups.B.slice();
   const rrA = roundRobin(A), rrB = roundRobin(B);
@@ -346,25 +381,18 @@ function generateSchedule(config){
   return schedule;
 }
 
-// ===== Rendering with adaptive rounds (accordion on narrow) =====
+// ===== Rendering (inputs disabled in public mode) =====
 function renderSchedule(){
   const wrap = document.getElementById("schedule");
   wrap.innerHTML = "";
   const sched = state.schedule;
-
   const narrow = window.matchMedia && window.matchMedia("(max-width: 720px)").matches;
 
-  // Group matches by round
   const rounds = {};
-  for(const m of sched){
-    const r = m[1];
-    if(!rounds[r]) rounds[r] = [];
-    rounds[r].push(m);
-  }
-  const roundNames = Object.keys(rounds);
-  roundNames.forEach((round,i)=>{
+  for(const m of sched){ const r = m[1]; if(!rounds[r]) rounds[r] = []; rounds[r].push(m); }
+  Object.keys(rounds).forEach((round,i)=>{
+    let rwrap;
     if(narrow){
-      // Accordion on narrow screens
       const box = document.createElement("div");
       box.className = "accordion" + (i===0 ? " acc-open" : "");
       box.innerHTML = `
@@ -372,25 +400,19 @@ function renderSchedule(){
           <div class="row"><h3 style="margin:0">${round}</h3><span class="badge">bis 4 Plätze</span></div>
           <span class="chev">⌃</span>
         </div>
-        <div class="acc-body"><div class="grid cols-2" id="round_${i}"></div></div>
-      `;
+        <div class="acc-body"><div class="grid cols-2" id="round_${i}"></div></div>`;
       box.querySelector(".acc-head").addEventListener("click", ()=> box.classList.toggle("acc-open"));
       wrap.appendChild(box);
-      var rwrap = box.querySelector("#round_"+i);
+      rwrap = box.querySelector("#round_"+i);
     } else {
-      // Expanded section on wide screens
       const r = document.createElement("div");
-      r.className = "card";
-      r.style.margin = "12px 0";
+      r.className = "card"; r.style.margin = "12px 0";
       r.innerHTML = `<div class="row" style="justify-content:space-between; align-items:center">
         <div class="row"><h3 style="margin:0">${round}</h3><span class="badge">Parallel: bis zu 4 Plätze</span></div>
         <span class="muted">ab Spiel #${rounds[round][0][0]}</span>
       </div>`;
-      const rwrapDiv = document.createElement("div");
-      rwrapDiv.className = "grid cols-2";
-      r.appendChild(rwrapDiv);
-      wrap.appendChild(r);
-      var rwrap = rwrapDiv;
+      const rwrapDiv = document.createElement("div"); rwrapDiv.className = "grid cols-2";
+      r.appendChild(rwrapDiv); wrap.appendChild(r); rwrap = rwrapDiv;
     }
 
     rounds[round].forEach(([id, , court, t1, t2, grp])=>{
@@ -403,62 +425,54 @@ function renderSchedule(){
           <span class="name">${t1}</span>
           <div class="row">
             <label class="muted">Sätze</label>
-            <input inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="s1_${id}" value="${m.sets1}">
+            <input ${VIEW_PUBLIC ? "disabled" : ""} inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="s1_${id}" value="${m.sets1}">
             <label class="muted">Spiele</label>
-            <input inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="g1_${id}" value="${m.games1}">
+            <input ${VIEW_PUBLIC ? "disabled" : ""} inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="g1_${id}" value="${m.games1}">
           </div>
         </div>
         <div class="team-row">
           <span class="name">${t2}</span>
           <div class="row">
             <label class="muted">Sätze</label>
-            <input inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="s2_${id}" value="${m.sets2}">
+            <input ${VIEW_PUBLIC ? "disabled" : ""} inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="s2_${id}" value="${m.sets2}">
             <label class="muted">Spiele</label>
-            <input inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="g2_${id}" value="${m.games2}">
+            <input ${VIEW_PUBLIC ? "disabled" : ""} inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="g2_${id}" value="${m.games2}">
           </div>
         </div>
         <div class="row" style="justify-content:flex-end; gap:8px">
-          <button class="btn ghost" id="clear_${id}">Löschen</button>
-        </div>
-      `;
+          ${VIEW_PUBLIC ? "" : `<button class="btn ghost" id="clear_${id}">Löschen</button>`}
+        </div>`;
       rwrap.appendChild(card);
 
-      function bind(idStr, key){
-        const el = document.getElementById(idStr);
-        if(!el) return;
-        el.addEventListener("input", async (e)=>{
-          state.matches["g"+id] = state.matches["g"+id] || {sets1:"", sets2:"", games1:"", games2:""};
-          state.matches["g"+id][key] = e.target.value;
-          if(USE_LOCAL_CACHE) saveLocal(state);
-          try {
-            await serverPatch(["matches","g"+id], state.matches["g"+id]);
-            setSyncStatus("✅ Synchronisiert", "ok");
-          } catch (ex) {
-            if(String(ex).includes("NO_ADMIN_TOKEN")){
-              setSyncStatus("🔒 Kein Admin‑Token – lokal gespeichert, nicht am Server", "err");
-            } else {
-              setSyncStatus("⚠️ Nicht synchronisiert (Serverfehler) – lokal zwischengespeichert", "err");
+      if(!VIEW_PUBLIC){
+        function bind(idStr, key){
+          const el = document.getElementById(idStr);
+          if(!el) return;
+          el.addEventListener("input", async (e)=>{
+            state.matches["g"+id] = state.matches["g"+id] || {sets1:"", sets2:"", games1:"", games2:""};
+            state.matches["g"+id][key] = e.target.value;
+            if(USE_LOCAL_CACHE) saveLocal(state);
+            try { await serverPatch(["matches","g"+id], state.matches["g"+id]); setSyncStatus("✅ Synchronisiert", "ok"); }
+            catch (ex) {
+              if(String(ex).includes("NO_ADMIN_TOKEN")) setSyncStatus("🔒 Kein Admin‑Token – lokal gespeichert, nicht am Server", "err");
+              else setSyncStatus("⚠️ Nicht synchronisiert (Serverfehler) – lokal zwischengespeichert", "err");
             }
+            updateTables(); renderKO(); updateKPIs();
+          });
+        }
+        bind(`s1_${id}`, "sets1"); bind(`s2_${id}`, "sets2"); bind(`g1_${id}`, "games1"); bind(`g2_${id}`, "games2");
+        const clr = document.getElementById(`clear_${id}`);
+        if(clr) clr.addEventListener("click", async ()=>{
+          state.matches["g"+id] = {sets1:"", sets2:"", games1:"", games2:""};
+          if(USE_LOCAL_CACHE) saveLocal(state);
+          try{ await serverPatch(["matches","g"+id], state.matches["g"+id]); setSyncStatus("✅ Synchronisiert","ok"); }
+          catch(ex){
+            if(String(ex).includes("NO_ADMIN_TOKEN")) setSyncStatus("🔒 Kein Admin‑Token – lokal gelöscht, nicht am Server","err");
+            else setSyncStatus("⚠️ Nicht synchronisiert (Serverfehler) – lokal zwischengespeichert","err");
           }
-          updateTables();
-          renderKO();
-          updateKPIs();
+          renderSchedule(); updateTables(); renderKO(); updateKPIs();
         });
       }
-      bind(`s1_${id}`, "sets1"); bind(`s2_${id}`, "sets2"); bind(`g1_${id}`, "games1"); bind(`g2_${id}`, "games2");
-      document.getElementById(`clear_${id}`).addEventListener("click", async ()=>{
-        state.matches["g"+id] = {sets1:"", sets2:"", games1:"", games2:""};
-        if(USE_LOCAL_CACHE) saveLocal(state);
-        try{ await serverPatch(["matches","g"+id], state.matches["g"+id]); setSyncStatus("✅ Synchronisiert","ok"); }
-        catch(ex){
-          if(String(ex).includes("NO_ADMIN_TOKEN")){
-            setSyncStatus("🔒 Kein Admin‑Token – lokal gelöscht, nicht am Server","err");
-          } else {
-            setSyncStatus("⚠️ Nicht synchronisiert (Serverfehler) – lokal zwischengespeichert","err");
-          }
-        }
-        renderSchedule(); updateTables(); renderKO(); updateKPIs();
-      });
     });
   });
 }
@@ -499,7 +513,7 @@ function computeStandings(){
     arr.sort((a,b)=>{
       const p = b.Pts - a.Pts; if(p) return p;
       const sd = (b.SetsPlus-b.SetsMinus) - (a.SetsPlus-a.SetsMinus); if(sd) return sd;
-      const gd = (b.GamesPlus-b.GamesMinus) - (a.GamesPlus-a.GamesMinus); if(gd) return gd;
+      const gd = (b.GamesPlus-b.GamesMinus) - (a.GamesPlus-a.GamesMinus) ; if(gd) return gd;
       const h = ((a.Team in h2h[grp] && b.Team in h2h[grp][a.Team]) ? h2h[grp][a.Team][b.Team] : 0)
               - ((b.Team in h2h[grp] && a.Team in h2h[grp][b.Team]) ? h2h[grp][b.Team][a.Team] : 0);
       if(h) return -h;
@@ -582,18 +596,19 @@ function renderKO(){
       <div class="team-row">
         <span class="name">${m.t1 || "—"}</span>
         <div class="row"><label class="muted">Sätze</label>
-          <input inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="${key}_s1" value="${m.s1}">
+          <input ${VIEW_PUBLIC ? "disabled" : ""} inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="${key}_s1" value="${m.s1}">
         </div>
       </div>
       <div class="team-row">
         <span class="name">${m.t2 || "—"}</span>
         <div class="row"><label class="muted">Sätze</label>
-          <input inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="${key}_s2" value="${m.s2}">
+          <input ${VIEW_PUBLIC ? "disabled" : ""} inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="${key}_s2" value="${m.s2}">
         </div>
       </div>
       <div class="hint">${ready? "Automatisch aus Gruppentabellen befüllt." : "Wartet auf Abschluss der Gruppenphase."}</div>
     `;
     setTimeout(()=>{
+      if(VIEW_PUBLIC) return;
       const s1 = document.getElementById(`${key}_s1`);
       const s2 = document.getElementById(`${key}_s2`);
       if(s1) s1.addEventListener("input", async (e)=>{
@@ -644,8 +659,9 @@ function updateKPIs(){
   `;
 }
 
-// ===== Admin UI =====
+// ===== Admin UI (hidden in public mode) =====
 function renderAdmin(){
+  if(VIEW_PUBLIC) return;
   const cfg = state.config;
   const countA = document.getElementById("countA");
   const countB = document.getElementById("countB");
@@ -713,7 +729,44 @@ function activateTab(name){
 document.querySelectorAll(".tab").forEach(t=> t.addEventListener("click", ()=> activateTab(t.dataset.tab)));
 document.querySelectorAll(".bottom-nav button").forEach(b=> b.addEventListener("click", ()=> activateTab(b.dataset.tab)));
 
-// Export
+// ===== QR Overlay & Sharing =====
+const overlay = document.getElementById("overlay");
+const qrBtn = document.getElementById("qrBtn");
+const qrImg = document.getElementById("qrImg");
+const shareLink = document.getElementById("shareLink");
+const closeOverlay = document.getElementById("closeOverlay");
+const copyBtn = document.getElementById("copyBtn");
+
+function buildPublicURL(){
+  const url = new URL(location.href);
+  url.searchParams.set("view", "public");
+  return url.toString();
+}
+function openQR(){
+  const link = buildPublicURL();
+  shareLink.value = link;
+  const qrURL = "https://api.qrserver.com/v1/create-qr-code/?size=480x480&margin=8&data=" + encodeURIComponent(link);
+  qrImg.src = qrURL;
+  overlay.classList.add("open");
+}
+function closeQR(){ overlay.classList.remove("open"); }
+qrBtn.addEventListener("click", ()=>{
+  // Try Web Share first
+  const link = buildPublicURL();
+  if(navigator.share){
+    navigator.share({ title: "TCO Doppelmaster 2025 – Live", text: "Live‑Tabelle & Spielplan", url: link })
+      .catch(()=> openQR());
+  }else{
+    openQR();
+  }
+});
+closeOverlay.addEventListener("click", closeQR);
+copyBtn.addEventListener("click", async ()=>{
+  try{ await navigator.clipboard.writeText(shareLink.value); copyBtn.textContent = "Kopiert!"; setTimeout(()=>copyBtn.textContent="Kopieren", 1500);}catch{}
+});
+overlay.addEventListener("click", (e)=>{ if(e.target === overlay) closeQR(); });
+
+// ===== Export =====
 document.getElementById("downloadJson").addEventListener("click", ()=>{
   const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
   const url = URL.createObjectURL(blob);
@@ -721,14 +774,14 @@ document.getElementById("downloadJson").addEventListener("click", ()=>{
   setTimeout(()=>URL.revokeObjectURL(url), 1500);
 });
 
-// Boot
+// ===== Boot =====
 (async function boot(){
   const data = await serverLoad();
   if(data){ state = data; } else if(USE_LOCAL_CACHE){ state = loadLocal(); } else { state = {}; }
   ensureState(); if(USE_LOCAL_CACHE) saveLocal(state);
   renderSchedule(); updateTables(); renderKO(); updateKPIs(); renderAdmin();
-  if(ADMIN_TOKEN){ setSyncStatus("🔓 Admin‑Token gesetzt – Server‑Speichern aktiv", "ok"); }
-  else { setSyncStatus("🔒 Kein Admin‑Token – nur Lesen/Cache", "err"); }
+  if(ADMIN_TOKEN && !VIEW_PUBLIC){ setSyncStatus("🔓 Admin‑Token gesetzt – Server‑Speichern aktiv", "ok"); }
+  else { setSyncStatus("🔒 Nur Lesen (Zuschauermodus oder kein Token)", ""); }
 })();
 </script>
 </body>
