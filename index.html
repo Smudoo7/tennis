@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>TCO Doppelmaster 2025 – Mobile Dashboard + Admin</title>
+<title>TCO Doppelmaster 2025 – Responsive Dashboard</title>
 <style>
   :root{
     --bg: #0f1220;
@@ -17,7 +17,8 @@
     --warn: #fbbf24;
     --shadow: 0 10px 30px rgba(0,0,0,.35);
     --radius: 16px;
-    --safe: env(safe-area-inset-bottom, 0);
+    --safe-b: env(safe-area-inset-bottom, 0);
+    --safe-t: env(safe-area-inset-top, 0);
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
   html,body{height:100%}
@@ -28,20 +29,27 @@
     color:var(--text);
     line-height:1.45;
   }
+  @media (prefers-reduced-motion: reduce){
+    *{scroll-behavior: auto; animation: none !important; transition: none !important;}
+  }
   header{
     position:sticky; top:0; z-index:10;
     backdrop-filter: blur(10px);
     background: rgba(15,18,32,.7);
-    padding:12px 16px; border-bottom:1px solid #1f2446;
+    padding:12px 16px calc(8px + var(--safe-t)); border-bottom:1px solid #1f2446;
   }
-  .container{max-width:1100px; margin:0 auto; padding:16px}
-  h1{font-size:clamp(18px, 3.6vw, 28px); margin:6px 0 4px}
+  .container{max-width:1200px; margin:0 auto; padding:16px}
+  h1{font-size:clamp(18px, 3.2vw, 32px); margin:6px 0 4px}
   .sub{color:var(--muted); font-size:12px}
   .grid{display:grid; gap:12px}
   .grid.cols-2{grid-template-columns: repeat(2, minmax(0,1fr));}
-  @media (max-width: 980px){ .grid.cols-2{grid-template-columns: 1fr;} }
+  .grid.cols-3{grid-template-columns: repeat(3, minmax(0,1fr));}
+  .grid.cols-4{grid-template-columns: repeat(4, minmax(0,1fr));}
+  @media (max-width: 1024px){ .grid.cols-3,.grid.cols-4{grid-template-columns: repeat(2, 1fr);} }
+  @media (max-width: 720px){ .grid.cols-2,.grid.cols-3,.grid.cols-4{grid-template-columns: 1fr;} }
 
-  .tabs{display:none; gap:8px; flex-wrap:wrap; margin:16px 0}
+  /* Tabs (desktop/tablet) */
+  .tabs{display:flex; gap:8px; flex-wrap:wrap; margin:16px 0}
   .tab{ padding:10px 14px; border:1px solid #26305f; border-radius:999px; cursor:pointer;
     color:var(--muted); background:#0f142a; transition:.2s; }
   .tab.active{color:#0c1326; background:linear-gradient(135deg, var(--accent), var(--accent-2)); border-color:transparent; font-weight:600}
@@ -63,23 +71,28 @@
   tbody td{padding:10px 8px; border-bottom:1px dashed #253060}
   tbody tr:hover{background:#10163a}
 
+  /* KPIs adapt */
   .kpi{display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:12px}
   .kpi .tile{ background: radial-gradient(400px 200px at 120% -20%, rgba(96,165,250,.2), transparent 70%) , #121734;
     border:1px solid #23306a; border-radius:16px; padding:14px; }
   .tile .label{font-size:12px; color:var(--muted)}
   .tile .value{font-size:18px; font-weight:700}
-  @media (max-width: 780px){ .kpi{grid-template-columns: repeat(2, 1fr);} .tile .value{font-size:16px} }
+  @media (max-width: 900px){ .kpi{grid-template-columns: repeat(2, 1fr);} }
+  @media (max-width: 520px){ .kpi{grid-template-columns: 1fr;} }
 
+  /* Inputs scale with pointer */
   input[type="number"], input[type="text"], input[type="password"], select{
-    background:#0e1431; border:1px solid #2b3568; color:var(--text); border-radius:12px; padding:12px 14px; font-size:16px;
+    background:#0e1431; border:1px solid #2b3568; color:var(--text); border-radius:12px; padding:10px 12px; font-size:16px;
   }
+  body.pointer-fine input{ padding:6px 8px; font-size:14px; border-radius:10px }
   input[type="number"]{ width:88px; }
   input[type="password"]{ width:200px; }
-  .btn{ appearance:none; border:none; border-radius:14px; padding:12px 16px; cursor:pointer;
+
+  .btn{ appearance:none; border:none; border-radius:14px; padding:10px 14px; cursor:pointer;
     color:#0b1225; background:linear-gradient(135deg, var(--accent), var(--accent-2)); font-weight:800;
     box-shadow: 0 8px 20px rgba(96,165,250,.25); font-size:16px; }
   .btn.ghost{background:#0f142a; color:var(--text); border:1px solid #273063; box-shadow:none}
-  .pill{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:#0f142a; border:1px solid #2b3568; color:var(--muted); font-size:12px}
+  body.pointer-fine .btn{ font-size:14px; padding:8px 12px; border-radius:12px }
 
   .match-card{border:1px solid #2d376b; border-radius:16px; padding:12px; background:#0f142a}
   .match-card .title{color:#a8b2e2; font-size:12px; margin-bottom:8px}
@@ -93,28 +106,31 @@
   .sync.err{color:#f87171}
   .label{font-size:12px; color:var(--muted);}
 
-  /* Bottom tab bar for mobile */
-  .bottom-nav{
-    position: fixed; left:0; right:0; bottom:0;
-    background: rgba(12,15,30,.9);
-    border-top:1px solid #20264a;
-    display:grid; grid-template-columns: repeat(4, 1fr); gap:0;
-    padding:8px 8px calc(8px + var(--safe));
-    z-index:20;
-    backdrop-filter: blur(8px);
-  }
-  .bottom-nav button{
-    background:none; border:none; color:#aeb5d9; font-size:12px; padding:8px 6px; border-radius:12px;
-  }
-  .bottom-nav button.active{ color:#0b1225; background:linear-gradient(135deg, var(--accent), var(--accent-2)); font-weight:800; }
-
-  main{ padding-bottom: calc(64px + var(--safe)); }
+  /* Accordion for rounds (collapsed on small screens) */
   .accordion{border:1px solid #26305f; border-radius:12px; overflow:hidden; margin:10px 0; background:#0f142a}
   .acc-head{display:flex; justify-content:space-between; align-items:center; padding:12px 14px; cursor:pointer}
   .acc-body{display:none; padding:10px 12px}
   .acc-open .acc-body{display:block}
   .acc-open .acc-head .chev{transform: rotate(180deg)}
   .chev{transition: .2s transform;}
+
+  /* Bottom nav shows on small, hides on >= 980px */
+  .bottom-nav{
+    position: fixed; left:0; right:0; bottom:0;
+    background: rgba(12,15,30,.9);
+    border-top:1px solid #20264a;
+    display:grid; grid-template-columns: repeat(4, 1fr); gap:0;
+    padding:8px 8px calc(8px + var(--safe-b));
+    z-index:20; backdrop-filter: blur(8px);
+  }
+  .bottom-nav button{
+    background:none; border:none; color:#aeb5d9; font-size:12px; padding:8px 6px; border-radius:12px;
+  }
+  .bottom-nav button.active{ color:#0b1225; background:linear-gradient(135deg, var(--accent), var(--accent-2)); font-weight:800; }
+  @media (min-width: 980px){ .bottom-nav{ display:none } }
+  @media (max-width: 979px){ .tabs{ display:none } } /* show tabs on desktop/tablet */
+
+  main{ padding-bottom: calc(64px + var(--safe-b)); }
 </style>
 </head>
 <body>
@@ -209,6 +225,15 @@
   </nav>
 
 <script>
+// ===== Device/feature detection: adjust density for touch vs mouse =====
+(function(){
+  const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+  document.body.classList.toggle("pointer-fine", !coarse);
+  // iOS standalone padding fix
+  const isStandalone = window.matchMedia && window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  if(isStandalone){ document.documentElement.style.setProperty("--safe-b", "0px"); }
+})();
+
 // ===== Config =====
 const TOURNAMENT_NAME = "TCO Doppelmaster 2025";
 const TOURNAMENT_ID = "TCO%20Doppelmaster%202025"; // URL-encodet
@@ -231,7 +256,7 @@ document.getElementById("saveTokenBtn").addEventListener("click", ()=>{
 });
 
 // ===== Helpers: Server Sync =====
-const KEY_LOCAL = "tco_doppelmaster_state_mobile";
+const KEY_LOCAL = "tco_doppelmaster_state_responsive";
 const syncBadge = document.getElementById("syncBadge");
 function setSyncStatus(text, cls=""){ syncBadge.textContent = text; syncBadge.className = "sync " + cls; }
 
@@ -321,11 +346,13 @@ function generateSchedule(config){
   return schedule;
 }
 
-// ===== Rendering with mobile accordions =====
+// ===== Rendering with adaptive rounds (accordion on narrow) =====
 function renderSchedule(){
   const wrap = document.getElementById("schedule");
   wrap.innerHTML = "";
   const sched = state.schedule;
+
+  const narrow = window.matchMedia && window.matchMedia("(max-width: 720px)").matches;
 
   // Group matches by round
   const rounds = {};
@@ -336,20 +363,36 @@ function renderSchedule(){
   }
   const roundNames = Object.keys(rounds);
   roundNames.forEach((round,i)=>{
-    const box = document.createElement("div");
-    box.className = "accordion" + (i===0 ? " acc-open" : ""); // first open
-    box.innerHTML = `
-      <div class="acc-head">
-        <div class="row"><h3 style="margin:0">${round}</h3><span class="badge">bis 4 Plätze</span></div>
-        <span class="chev">⌃</span>
-      </div>
-      <div class="acc-body"><div class="grid cols-2" id="round_${i}"></div></div>
-    `;
-    const head = box.querySelector(".acc-head");
-    head.addEventListener("click", ()=>{ box.classList.toggle("acc-open"); });
-    wrap.appendChild(box);
+    if(narrow){
+      // Accordion on narrow screens
+      const box = document.createElement("div");
+      box.className = "accordion" + (i===0 ? " acc-open" : "");
+      box.innerHTML = `
+        <div class="acc-head">
+          <div class="row"><h3 style="margin:0">${round}</h3><span class="badge">bis 4 Plätze</span></div>
+          <span class="chev">⌃</span>
+        </div>
+        <div class="acc-body"><div class="grid cols-2" id="round_${i}"></div></div>
+      `;
+      box.querySelector(".acc-head").addEventListener("click", ()=> box.classList.toggle("acc-open"));
+      wrap.appendChild(box);
+      var rwrap = box.querySelector("#round_"+i);
+    } else {
+      // Expanded section on wide screens
+      const r = document.createElement("div");
+      r.className = "card";
+      r.style.margin = "12px 0";
+      r.innerHTML = `<div class="row" style="justify-content:space-between; align-items:center">
+        <div class="row"><h3 style="margin:0">${round}</h3><span class="badge">Parallel: bis zu 4 Plätze</span></div>
+        <span class="muted">ab Spiel #${rounds[round][0][0]}</span>
+      </div>`;
+      const rwrapDiv = document.createElement("div");
+      rwrapDiv.className = "grid cols-2";
+      r.appendChild(rwrapDiv);
+      wrap.appendChild(r);
+      var rwrap = rwrapDiv;
+    }
 
-    const rwrap = box.querySelector("#round_"+i);
     rounds[round].forEach(([id, , court, t1, t2, grp])=>{
       const m = state.matches["g"+id] || {sets1:"", sets2:"", games1:"", games2:""};
       const card = document.createElement("div");
@@ -659,7 +702,7 @@ function renderAdmin(){
   };
 }
 
-// ===== Tabs (bottom nav + header tabs for desktop) =====
+// ===== Tabs (bottom nav + header tabs for desktop/tablet) =====
 function activateTab(name){
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x.dataset.tab===name));
   document.querySelectorAll(".bottom-nav button").forEach(x=>x.classList.toggle("active", x.dataset.tab===name));
