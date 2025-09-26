@@ -1,0 +1,8 @@
+{
+  "name": "tco-doppelmaster-2025",
+  "private": true,
+  "version": "1.0.0",
+  "dependencies": {
+    "@netlify/blobs": "^6.3.0"
+  }
+}
