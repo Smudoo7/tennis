@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>TCO Doppelmaster 2025 – Responsive Dashboard (Public‑Mode + QR)</title>
+<title>TCO Doppelmaster 2025 – Dashboard (Admin mit Token-Overlay)</title>
 <style>
   :root{
     --bg: #0f1220;
@@ -29,12 +29,8 @@
     color:var(--text);
     line-height:1.45;
   }
-  @media (prefers-reduced-motion: reduce){
-    *{scroll-behavior: auto; animation: none !important; transition: none !important;}
-  }
   header{
-    position:sticky; top:0; z-index:10;
-    backdrop-filter: blur(10px);
+    position:sticky; top:0; z-index:10; backdrop-filter: blur(10px);
     background: rgba(15,18,32,.7);
     padding:12px 16px calc(8px + var(--safe-t)); border-bottom:1px solid #1f2446;
   }
@@ -125,36 +121,36 @@
 
   main{ padding-bottom: calc(64px + var(--safe-b)); }
 
-  /* QR Overlay */
+  /* Token Overlay */
   .overlay{
-    position: fixed; inset:0; background: rgba(5,7,15,.8); backdrop-filter: blur(6px);
+    position: fixed; inset:0; background: rgba(5,7,15,.82); backdrop-filter: blur(6px);
     display:none; align-items:center; justify-content:center; z-index:50;
   }
   .overlay.open{ display:flex }
-  .qr-card{
+  .dlg{
     width:min(520px, 92vw);
     background: linear-gradient(180deg, rgba(255,255,255,.03), transparent), #121734;
-    border:1px solid #263266; border-radius:18px; padding:16px; box-shadow: var(--shadow);
+    border:1px solid #263266; border-radius:18px; padding:18px; box-shadow: var(--shadow);
   }
-  .qr-grid{ display:grid; grid-template-columns: 1fr; gap:12px; justify-items:center }
-  .qr-grid img{ width: min(360px, 70vw); aspect-ratio:1; border-radius:12px; background:#fff }
-  .qr-row{ display:flex; gap:8px; width:100% }
-  .qr-row input{ flex:1 }
+  .dlg h3{ margin:0 0 8px }
+  .row.spread{ justify-content:space-between }
+  .token-row{ display:flex; gap:8px; }
+  .token-row input{ flex:1 }
+  .muted-small{ font-size:12px; color:#a6add1 }
 </style>
 </head>
 <body>
   <header>
     <div class="container">
-      <div class="row" style="justify-content:space-between; align-items:center">
+      <div class="row spread">
         <div>
-          <h1>🏆 TCO Doppelmaster 2025 <span id="modeBadge" class="badge"></span></h1>
+          <h1>🏆 TCO Doppelmaster 2025</h1>
           <div class="sub">Gruppenphase & KO · 4 Plätze · A auf 1–2 · B auf 3–4</div>
         </div>
         <div class="row" style="gap:8px">
           <span id="syncBadge" class="sync">🔄 Verbinden…</span>
           <input type="password" id="adminTokenInput" placeholder="Admin‑Token" aria-label="Admin Token" />
           <button class="btn ghost" id="saveTokenBtn" title="Lokal speichern">Token</button>
-          <button class="btn ghost" id="qrBtn" title="QR teilen">QR teilen</button>
           <button class="btn" id="downloadJson" title="Export JSON">Export</button>
         </div>
       </div>
@@ -170,7 +166,7 @@
 
   <main class="container">
     <section id="plan" class="card">
-      <div class="row" style="justify-content:space-between">
+      <div class="row spread">
         <h2>🗓️ Spielplan</h2>
         <span class="pill">Server‑Sync nur mit Admin‑Token • lokaler Cache aktiv</span>
       </div>
@@ -199,7 +195,7 @@
     </section>
 
     <section id="admin" class="card" style="display:none">
-      <div class="row" style="justify-content:space-between">
+      <div class="row spread">
         <h2>🛠️ Admin</h2>
         <span class="pill">Speichern → Spielplan neu generiert</span>
       </div>
@@ -234,17 +230,18 @@
     <button data-tab="admin">Admin</button>
   </nav>
 
-  <div id="overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
-    <div class="qr-card">
-      <div class="qr-grid">
-        <h3 id="qrTitle" style="margin:0">🔗 Teilen / QR-Code</h3>
-        <img id="qrImg" alt="QR-Code zum Öffnen">
-        <div class="qr-row">
-          <input type="text" id="shareLink" readonly>
-          <button class="btn" id="copyBtn">Kopieren</button>
-          <button class="btn ghost" id="closeOverlay">Schließen</button>
-        </div>
-        <div class="hint">Tipp: Web Share (Android/iOS) – wenn verfügbar – nutzt den nativen Share‑Dialog.</div>
+  <!-- First-run Admin Token overlay -->
+  <div id="tokenOverlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="tokTitle">
+    <div class="dlg">
+      <h3 id="tokTitle">🔐 Admin-Zugriff</h3>
+      <p class="muted-small">Gib dein <b>Admin‑Token</b> ein, um Ergebnisse & Einstellungen zentral zu speichern. Du kannst auch „Später“ wählen und erst einmal im Nur‑Lesen‑Modus starten.</p>
+      <div class="token-row">
+        <input type="password" id="ovToken" placeholder="Admin‑Token">
+        <button class="btn ghost" id="toggleOv">👁︎</button>
+      </div>
+      <div class="row" style="justify-content:flex-end; margin-top:10px; gap:8px">
+        <button class="btn ghost" id="skipOv">Später</button>
+        <button class="btn" id="saveOv">Weiter</button>
       </div>
     </div>
   </div>
@@ -252,59 +249,76 @@
 <script>
 // ===== URL mode handling =====
 const params = new URLSearchParams(location.search);
-const VIEW_PUBLIC = (params.get("view") === "public");
-const modeBadge = document.getElementById("modeBadge");
-if(VIEW_PUBLIC){
-  modeBadge.textContent = "Zuschauermodus";
-} else {
-  modeBadge.textContent = "Admin/Editor";
-}
+const VIEW_PUBLIC = (params.get("view") === "public"); // this page: focus on non-public flow
 
-// ===== Device density tweak =====
-(function(){
-  const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
-  document.body.classList.toggle("pointer-fine", !coarse);
-})();
-
-// ===== Config =====
-const TOURNAMENT_NAME = "TCO Doppelmaster 2025";
-const TOURNAMENT_ID = "TCO%20Doppelmaster%202025"; // URL-encodet
-const API = `/.netlify/functions/state?t=${TOURNAMENT_ID}`;
-const USE_LOCAL_CACHE = true;
-
-// ===== Admin-Token Handling =====
+// ===== Keys / Flags =====
 const KEY_TOKEN = "tco_admin_token";
-let ADMIN_TOKEN = localStorage.getItem(KEY_TOKEN) || "";
+const KEY_PROMPT_SHOWN = "tco_token_prompt_shown_v1";
+
+// ===== Elements =====
+const tokenOverlay = document.getElementById("tokenOverlay");
+const ovInput = document.getElementById("ovToken");
+const ovToggle = document.getElementById("toggleOv");
+const ovSkip = document.getElementById("skipOv");
+const ovSave = document.getElementById("saveOv");
 const tokenInput = document.getElementById("adminTokenInput");
-const tokenBtn = document.getElementById("saveTokenBtn");
-tokenInput.value = ADMIN_TOKEN;
-tokenBtn.addEventListener("click", ()=>{
-  ADMIN_TOKEN = tokenInput.value.trim();
+const saveTokenBtn = document.getElementById("saveTokenBtn");
+const syncBadge = document.getElementById("syncBadge");
+
+// ===== Admin-Token state =====
+let ADMIN_TOKEN = localStorage.getItem(KEY_TOKEN) || "";
+
+// First-run overlay logic (non-public only)
+function maybeShowTokenOverlay(reason){
+  if(VIEW_PUBLIC) return; // never in public
+  const already = localStorage.getItem(KEY_PROMPT_SHOWN) === "1";
+  if(!already || reason === "ON_DEMAND"){
+    tokenOverlay.classList.add("open");
+    ovInput.value = ADMIN_TOKEN || "";
+  }
+}
+function closeTokenOverlay(){
+  tokenOverlay.classList.remove("open");
+  localStorage.setItem(KEY_PROMPT_SHOWN, "1");
+}
+ovToggle.addEventListener("click", ()=>{
+  ovInput.type = (ovInput.type === "password") ? "text" : "password";
+});
+ovSave.addEventListener("click", ()=>{
+  ADMIN_TOKEN = ovInput.value.trim();
   localStorage.setItem(KEY_TOKEN, ADMIN_TOKEN);
-  if(ADMIN_TOKEN){ setSyncStatus("🔓 Admin‑Token gesetzt – Server‑Speichern aktiv", "ok"); }
-  else { setSyncStatus("🔒 Kein Admin‑Token – keine Serverspeicherung", "err"); }
+  tokenInput.value = ADMIN_TOKEN;
+  setSyncStatus(ADMIN_TOKEN? "🔓 Admin‑Token gesetzt – Server‑Speichern aktiv" : "🔒 Kein Admin‑Token – keine Serverspeicherung", ADMIN_TOKEN? "ok": "err");
+  closeTokenOverlay();
+});
+ovSkip.addEventListener("click", ()=>{
+  setSyncStatus("🔒 Nur Lesen – Du kannst das Token später setzen", ""); 
+  closeTokenOverlay();
 });
 
-// In viewer mode: hide token UI & admin nav/tab
-if(VIEW_PUBLIC){
-  document.getElementById("adminTokenInput").style.display = "none";
-  document.getElementById("saveTokenBtn").style.display = "none";
-  document.querySelector('nav.bottom-nav button[data-tab="admin"]').style.display = "none";
-  document.querySelector('#tabs button[data-tab="admin"]').style.display = "none";
-  document.getElementById("admin").style.display = "none";
-}
+// Header token save
+tokenInput.value = ADMIN_TOKEN;
+saveTokenBtn.addEventListener("click", ()=>{
+  ADMIN_TOKEN = tokenInput.value.trim();
+  localStorage.setItem(KEY_TOKEN, ADMIN_TOKEN);
+  setSyncStatus(ADMIN_TOKEN? "🔓 Admin‑Token gesetzt – Server‑Speichern aktiv" : "🔒 Kein Admin‑Token – keine Serverspeicherung", ADMIN_TOKEN? "ok": "err");
+});
 
-// ===== Helpers: Server Sync =====
-const KEY_LOCAL = "tco_doppelmaster_state_publicqr";
-const syncBadge = document.getElementById("syncBadge");
+// ===== Sync helpers =====
 function setSyncStatus(text, cls=""){ syncBadge.textContent = text; syncBadge.className = "sync " + cls; }
+
+const TOURNAMENT_NAME = "TCO Doppelmaster 2025";
+const TOURNAMENT_ID = "TCO%20Doppelmaster%202025";
+const API = `/.netlify/functions/state?t=${TOURNAMENT_ID}`;
+const USE_LOCAL_CACHE = true;
+const KEY_LOCAL = "tco_doppelmaster_state_adminOverlay";
 
 async function serverLoad() {
   try {
     const res = await fetch(API, { method: "GET" });
     if(!res.ok) throw new Error("GET failed");
     const data = await res.json();
-    setSyncStatus((ADMIN_TOKEN && !VIEW_PUBLIC) ? "✅ Verbunden (Token bereit)" : "ℹ️ Verbunden (Nur Lesen)", (ADMIN_TOKEN && !VIEW_PUBLIC) ? "ok" : "");
+    setSyncStatus(ADMIN_TOKEN ? "✅ Verbunden (Token bereit)" : "ℹ️ Verbunden (nur Lesen – kein Token)", ADMIN_TOKEN ? "ok" : "");
     return data || {};
   } catch(e) {
     setSyncStatus("⚠️ Offline/Serverfehler", "err");
@@ -312,13 +326,25 @@ async function serverLoad() {
   }
 }
 function withAuthHeaders(baseHeaders = {}){
-  if(!ADMIN_TOKEN || VIEW_PUBLIC) throw new Error("NO_ADMIN_TOKEN");
+  if(!ADMIN_TOKEN) throw new Error("NO_ADMIN_TOKEN");
   return { ...baseHeaders, "x-admin-token": ADMIN_TOKEN };
 }
 async function serverPatch(pathArray, value){
-  const headers = withAuthHeaders({ "content-type": "application/json" });
-  const res = await fetch(API, { method: "PATCH", headers, body: JSON.stringify({ path: pathArray, value }) });
-  if(!res.ok) throw new Error("PATCH failed");
+  try{
+    const headers = withAuthHeaders({ "content-type": "application/json" });
+    const res = await fetch(API, { method: "PATCH", headers, body: JSON.stringify({ path: pathArray, value }) });
+    if(!res.ok) throw new Error("PATCH failed");
+    setSyncStatus("✅ Synchronisiert", "ok");
+  }catch(ex){
+    if(String(ex).includes("NO_ADMIN_TOKEN")){
+      setSyncStatus("🔒 Kein Admin‑Token – lokal gespeichert, nicht am Server", "err");
+      // On-demand prompt if user tried to write
+      maybeShowTokenOverlay("ON_DEMAND");
+    }else{
+      setSyncStatus("⚠️ Nicht synchronisiert (Serverfehler) – lokal zwischengespeichert", "err");
+    }
+    throw ex;
+  }
 }
 
 // ===== Local cache =====
@@ -326,12 +352,9 @@ function loadLocal(){ try { return JSON.parse(localStorage.getItem(KEY_LOCAL)) |
 function saveLocal(s){ try { localStorage.setItem(KEY_LOCAL, JSON.stringify(s)); } catch {} }
 function resetLocal(){ localStorage.removeItem(KEY_LOCAL); }
 
-// ===== App State =====
+// ===== App State & Generators (same logic as vorherige Versionen) =====
 let state = {};
-
-function defaultConfig(){
-  return { groups: { A: ["A1","A2","A3","A4","A5"], B: ["B1","B2","B3","B4"] }, avoidFirstA5: true };
-}
+function defaultConfig(){ return { groups: { A: ["A1","A2","A3","A4","A5"], B: ["B1","B2","B3","B4"] }, avoidFirstA5: true }; }
 function ensureState(){
   if(!state.config) state.config = defaultConfig();
   if(!state.schedule) state.schedule = generateSchedule(state.config);
@@ -342,7 +365,6 @@ function ensureState(){
   if(!state.KO) state.KO = { SF1:{t1:"A1", t2:"B2", s1:"", s2:""}, SF2:{t1:"B1", t2:"A2", s1:"", s2:""}, F:{t1:"", t2:"", s1:"", s2:""}, P3:{t1:"", t2:"", s1:"", s2:""} };
 }
 
-// ===== Round-Robin =====
 function roundRobin(teams){
   const list = teams.slice();
   if(list.length % 2 === 1) list.push("BYE");
@@ -381,39 +403,22 @@ function generateSchedule(config){
   return schedule;
 }
 
-// ===== Rendering (inputs disabled in public mode) =====
+// ===== Rendering, standings, KO (gleich wie zuvor) =====
 function renderSchedule(){
   const wrap = document.getElementById("schedule");
   wrap.innerHTML = "";
   const sched = state.schedule;
-  const narrow = window.matchMedia && window.matchMedia("(max-width: 720px)").matches;
 
   const rounds = {};
   for(const m of sched){ const r = m[1]; if(!rounds[r]) rounds[r] = []; rounds[r].push(m); }
   Object.keys(rounds).forEach((round,i)=>{
-    let rwrap;
-    if(narrow){
-      const box = document.createElement("div");
-      box.className = "accordion" + (i===0 ? " acc-open" : "");
-      box.innerHTML = `
-        <div class="acc-head">
-          <div class="row"><h3 style="margin:0">${round}</h3><span class="badge">bis 4 Plätze</span></div>
-          <span class="chev">⌃</span>
-        </div>
-        <div class="acc-body"><div class="grid cols-2" id="round_${i}"></div></div>`;
-      box.querySelector(".acc-head").addEventListener("click", ()=> box.classList.toggle("acc-open"));
-      wrap.appendChild(box);
-      rwrap = box.querySelector("#round_"+i);
-    } else {
-      const r = document.createElement("div");
-      r.className = "card"; r.style.margin = "12px 0";
-      r.innerHTML = `<div class="row" style="justify-content:space-between; align-items:center">
-        <div class="row"><h3 style="margin:0">${round}</h3><span class="badge">Parallel: bis zu 4 Plätze</span></div>
-        <span class="muted">ab Spiel #${rounds[round][0][0]}</span>
-      </div>`;
-      const rwrapDiv = document.createElement("div"); rwrapDiv.className = "grid cols-2";
-      r.appendChild(rwrapDiv); wrap.appendChild(r); rwrap = rwrapDiv;
-    }
+    const r = document.createElement("div");
+    r.className = "card"; r.style.margin = "12px 0";
+    r.innerHTML = `<div class="row" style="justify-content:space-between; align-items:center">
+      <div class="row"><h3 style="margin:0">${round}</h3><span class="badge">Parallel: bis zu 4 Plätze</span></div>
+      <span class="muted">ab Spiel #${rounds[round][0][0]}</span>
+    </div>`;
+    const rwrap = document.createElement("div"); rwrap.className = "grid cols-2"; r.appendChild(rwrap); wrap.appendChild(r);
 
     rounds[round].forEach(([id, , court, t1, t2, grp])=>{
       const m = state.matches["g"+id] || {sets1:"", sets2:"", games1:"", games2:""};
@@ -425,60 +430,49 @@ function renderSchedule(){
           <span class="name">${t1}</span>
           <div class="row">
             <label class="muted">Sätze</label>
-            <input ${VIEW_PUBLIC ? "disabled" : ""} inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="s1_${id}" value="${m.sets1}">
+            <input inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="s1_${id}" value="${m.sets1}">
             <label class="muted">Spiele</label>
-            <input ${VIEW_PUBLIC ? "disabled" : ""} inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="g1_${id}" value="${m.games1}">
+            <input inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="g1_${id}" value="${m.games1}">
           </div>
         </div>
         <div class="team-row">
           <span class="name">${t2}</span>
           <div class="row">
             <label class="muted">Sätze</label>
-            <input ${VIEW_PUBLIC ? "disabled" : ""} inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="s2_${id}" value="${m.sets2}">
+            <input inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="s2_${id}" value="${m.sets2}">
             <label class="muted">Spiele</label>
-            <input ${VIEW_PUBLIC ? "disabled" : ""} inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="g2_${id}" value="${m.games2}">
+            <input inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="g2_${id}" value="${m.games2}">
           </div>
         </div>
         <div class="row" style="justify-content:flex-end; gap:8px">
-          ${VIEW_PUBLIC ? "" : `<button class="btn ghost" id="clear_${id}">Löschen</button>`}
+          <button class="btn ghost" id="clear_${id}">Löschen</button>
         </div>`;
       rwrap.appendChild(card);
 
-      if(!VIEW_PUBLIC){
-        function bind(idStr, key){
-          const el = document.getElementById(idStr);
-          if(!el) return;
-          el.addEventListener("input", async (e)=>{
-            state.matches["g"+id] = state.matches["g"+id] || {sets1:"", sets2:"", games1:"", games2:""};
-            state.matches["g"+id][key] = e.target.value;
-            if(USE_LOCAL_CACHE) saveLocal(state);
-            try { await serverPatch(["matches","g"+id], state.matches["g"+id]); setSyncStatus("✅ Synchronisiert", "ok"); }
-            catch (ex) {
-              if(String(ex).includes("NO_ADMIN_TOKEN")) setSyncStatus("🔒 Kein Admin‑Token – lokal gespeichert, nicht am Server", "err");
-              else setSyncStatus("⚠️ Nicht synchronisiert (Serverfehler) – lokal zwischengespeichert", "err");
-            }
-            updateTables(); renderKO(); updateKPIs();
-          });
-        }
-        bind(`s1_${id}`, "sets1"); bind(`s2_${id}`, "sets2"); bind(`g1_${id}`, "games1"); bind(`g2_${id}`, "games2");
-        const clr = document.getElementById(`clear_${id}`);
-        if(clr) clr.addEventListener("click", async ()=>{
-          state.matches["g"+id] = {sets1:"", sets2:"", games1:"", games2:""};
+      function bind(idStr, key){
+        const el = document.getElementById(idStr);
+        if(!el) return;
+        el.addEventListener("input", async (e)=>{
+          state.matches["g"+id] = state.matches["g"+id] || {sets1:"", sets2:"", games1:"", games2:""};
+          state.matches["g"+id][key] = e.target.value;
           if(USE_LOCAL_CACHE) saveLocal(state);
-          try{ await serverPatch(["matches","g"+id], state.matches["g"+id]); setSyncStatus("✅ Synchronisiert","ok"); }
-          catch(ex){
-            if(String(ex).includes("NO_ADMIN_TOKEN")) setSyncStatus("🔒 Kein Admin‑Token – lokal gelöscht, nicht am Server","err");
-            else setSyncStatus("⚠️ Nicht synchronisiert (Serverfehler) – lokal zwischengespeichert","err");
-          }
-          renderSchedule(); updateTables(); renderKO(); updateKPIs();
+          try { await serverPatch(["matches","g"+id], state.matches["g"+id]); }
+          catch { /* status set in serverPatch */ }
+          updateTables(); renderKO(); updateKPIs();
         });
       }
+      bind(`s1_${id}`, "sets1"); bind(`s2_${id}`, "sets2"); bind(`g1_${id}`, "games1"); bind(`g2_${id}`, "games2");
+      document.getElementById(`clear_${id}`).addEventListener("click", async ()=>{
+        state.matches["g"+id] = {sets1:"", sets2:"", games1:"", games2:""};
+        if(USE_LOCAL_CACHE) saveLocal(state);
+        try{ await serverPatch(["matches","g"+id], state.matches["g"+id]); } catch {}
+        renderSchedule(); updateTables(); renderKO(); updateKPIs();
+      });
     });
   });
 }
 
 function isNumber(x){ return x!=="" && !isNaN(Number(x)); }
-
 function computeStandings(){
   const groups = state.config.groups;
   const standings = { A:{}, B:{} };
@@ -486,7 +480,6 @@ function computeStandings(){
     for(const t of groups[g]) standings[g][t] = {Team:t, GP:0, W:0, L:0, SetsPlus:0, SetsMinus:0, GamesPlus:0, GamesMinus:0, Pts:0};
   }
   const h2h = {A:{}, B:{}}; for(const g of ["A","B"]){ for(const t of groups[g]) h2h[g][t] = {}; }
-
   state.schedule.forEach(([id, , , t1, t2, grp])=>{
     const r = state.matches["g"+id] || {};
     const s1 = Number(r.sets1), s2 = Number(r.sets2);
@@ -497,23 +490,19 @@ function computeStandings(){
     standings[grp][t1].GP++; standings[grp][t2].GP++;
     standings[grp][t1].SetsPlus += s1; standings[grp][t1].SetsMinus += s2;
     standings[grp][t2].SetsPlus += s2; standings[grp][t2].SetsMinus += s1;
-    if(haveGames){
-      standings[grp][t1].GamesPlus += g1; standings[grp][t1].GamesMinus += g2;
-      standings[grp][t2].GamesPlus += g2; standings[grp][t2].GamesMinus += g1;
-    }
+    if(haveGames){ standings[grp][t1].GamesPlus += g1; standings[grp][t1].GamesMinus += g2; standings[grp][t2].GamesPlus += g2; standings[grp][t2].GamesMinus += g1; }
     if(s1>s2){ standings[grp][t1].W++; standings[grp][t2].L++; standings[grp][t1].Pts++; }
     else if(s2>s1){ standings[grp][t2].W++; standings[grp][t1].L++; standings[grp][t2].Pts++; }
     const winner = s1===s2 ? null : (s1>s2 ? t1 : t2);
     const loser  = s1===s2 ? null : (s1>s2 ? t2 : t1);
     if(winner && loser){ h2h[grp][winner][loser] = (h2h[grp][winner][loser] || 0) + 1; }
   });
-
   function sortGroup(grp){
     const arr = Object.values(standings[grp]);
     arr.sort((a,b)=>{
       const p = b.Pts - a.Pts; if(p) return p;
       const sd = (b.SetsPlus-b.SetsMinus) - (a.SetsPlus-a.SetsMinus); if(sd) return sd;
-      const gd = (b.GamesPlus-b.GamesMinus) - (a.GamesPlus-a.GamesMinus) ; if(gd) return gd;
+      const gd = (b.GamesPlus-b.GamesMinus) - (a.GamesPlus-a.GamesMinus); if(gd) return gd;
       const h = ((a.Team in h2h[grp] && b.Team in h2h[grp][a.Team]) ? h2h[grp][a.Team][b.Team] : 0)
               - ((b.Team in h2h[grp] && a.Team in h2h[grp][b.Team]) ? h2h[grp][b.Team][a.Team] : 0);
       if(h) return -h;
@@ -524,7 +513,6 @@ function computeStandings(){
   }
   return {A: sortGroup("A"), B: sortGroup("B")};
 }
-
 function tableHTML(rows){
   return `
   <table>
@@ -550,13 +538,11 @@ function tableHTML(rows){
     </tbody>
   </table>`;
 }
-
 function updateTables(){
   const {A, B} = computeStandings();
   document.getElementById("tableA").innerHTML = tableHTML(A);
   document.getElementById("tableB").innerHTML = tableHTML(B);
 }
-
 function allGroupFinished(grp){
   const total = state.schedule.filter(s=>s[5]===grp).length;
   let have = 0;
@@ -566,7 +552,6 @@ function allGroupFinished(grp){
   });
   return have === total && total>0;
 }
-
 function renderKO(){
   const br = document.getElementById("koBracket");
   br.innerHTML = "";
@@ -596,39 +581,31 @@ function renderKO(){
       <div class="team-row">
         <span class="name">${m.t1 || "—"}</span>
         <div class="row"><label class="muted">Sätze</label>
-          <input ${VIEW_PUBLIC ? "disabled" : ""} inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="${key}_s1" value="${m.s1}">
+          <input inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="${key}_s1" value="${m.s1}">
         </div>
       </div>
       <div class="team-row">
         <span class="name">${m.t2 || "—"}</span>
         <div class="row"><label class="muted">Sätze</label>
-          <input ${VIEW_PUBLIC ? "disabled" : ""} inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="${key}_s2" value="${m.s2}">
+          <input inputmode="numeric" pattern="[0-9]*" type="number" min="0" step="1" id="${key}_s2" value="${m.s2}">
         </div>
       </div>
       <div class="hint">${ready? "Automatisch aus Gruppentabellen befüllt." : "Wartet auf Abschluss der Gruppenphase."}</div>
     `;
-    setTimeout(()=>{
-      if(VIEW_PUBLIC) return;
+    setTimeout(async ()=>{
+      // Save KO changes (will prompt on demand if no token)
       const s1 = document.getElementById(`${key}_s1`);
       const s2 = document.getElementById(`${key}_s2`);
       if(s1) s1.addEventListener("input", async (e)=>{
         state.KO[key].s1 = e.target.value;
         if(USE_LOCAL_CACHE) saveLocal(state);
-        try{ await serverPatch(["KO", key], state.KO[key]); setSyncStatus("✅ Synchronisiert","ok"); }
-        catch(ex){
-          if(String(ex).includes("NO_ADMIN_TOKEN")) setSyncStatus("🔒 Kein Admin‑Token – lokal gespeichert, nicht am Server","err");
-          else setSyncStatus("⚠️ Nicht synchronisiert (Serverfehler) – lokal zwischengespeichert","err");
-        }
+        try{ await serverPatch(["KO", key], state.KO[key]); } catch{}
         renderKO();
       });
       if(s2) s2.addEventListener("input", async (e)=>{
         state.KO[key].s2 = e.target.value;
         if(USE_LOCAL_CACHE) saveLocal(state);
-        try{ await serverPatch(["KO", key], state.KO[key]); setSyncStatus("✅ Synchronisiert","ok"); }
-        catch(ex){
-          if(String(ex).includes("NO_ADMIN_TOKEN")) setSyncStatus("🔒 Kein Admin‑Token – lokal gespeichert, nicht am Server","err");
-          else setSyncStatus("⚠️ Nicht synchronisiert (Serverfehler) – lokal zwischengespeichert","err");
-        }
+        try{ await serverPatch(["KO", key], state.KO[key]); } catch{}
         renderKO();
       });
     }, 0);
@@ -659,9 +636,8 @@ function updateKPIs(){
   `;
 }
 
-// ===== Admin UI (hidden in public mode) =====
+// Admin UI
 function renderAdmin(){
-  if(VIEW_PUBLIC) return;
   const cfg = state.config;
   const countA = document.getElementById("countA");
   const countB = document.getElementById("countB");
@@ -709,16 +685,12 @@ function renderAdmin(){
       await serverPatch(["schedule"], newSchedule);
       await serverPatch(["matches"], newMatches);
       await serverPatch(["KO"], state.KO);
-      setSyncStatus("✅ Synchronisiert", "ok");
-    }catch(ex){
-      if(String(ex).includes("NO_ADMIN_TOKEN")) setSyncStatus("🔒 Kein Admin‑Token – lokal gespeichert, nicht am Server", "err");
-      else setSyncStatus("⚠️ Nicht synchronisiert (Serverfehler) – lokal zwischengespeichert", "err");
-    }
+    }catch{}
     renderSchedule(); updateTables(); renderKO(); updateKPIs(); renderAdmin();
   };
 }
 
-// ===== Tabs (bottom nav + header tabs for desktop/tablet) =====
+// Tabs
 function activateTab(name){
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x.dataset.tab===name));
   document.querySelectorAll(".bottom-nav button").forEach(x=>x.classList.toggle("active", x.dataset.tab===name));
@@ -729,44 +701,7 @@ function activateTab(name){
 document.querySelectorAll(".tab").forEach(t=> t.addEventListener("click", ()=> activateTab(t.dataset.tab)));
 document.querySelectorAll(".bottom-nav button").forEach(b=> b.addEventListener("click", ()=> activateTab(b.dataset.tab)));
 
-// ===== QR Overlay & Sharing =====
-const overlay = document.getElementById("overlay");
-const qrBtn = document.getElementById("qrBtn");
-const qrImg = document.getElementById("qrImg");
-const shareLink = document.getElementById("shareLink");
-const closeOverlay = document.getElementById("closeOverlay");
-const copyBtn = document.getElementById("copyBtn");
-
-function buildPublicURL(){
-  const url = new URL(location.href);
-  url.searchParams.set("view", "public");
-  return url.toString();
-}
-function openQR(){
-  const link = buildPublicURL();
-  shareLink.value = link;
-  const qrURL = "https://api.qrserver.com/v1/create-qr-code/?size=480x480&margin=8&data=" + encodeURIComponent(link);
-  qrImg.src = qrURL;
-  overlay.classList.add("open");
-}
-function closeQR(){ overlay.classList.remove("open"); }
-qrBtn.addEventListener("click", ()=>{
-  // Try Web Share first
-  const link = buildPublicURL();
-  if(navigator.share){
-    navigator.share({ title: "TCO Doppelmaster 2025 – Live", text: "Live‑Tabelle & Spielplan", url: link })
-      .catch(()=> openQR());
-  }else{
-    openQR();
-  }
-});
-closeOverlay.addEventListener("click", closeQR);
-copyBtn.addEventListener("click", async ()=>{
-  try{ await navigator.clipboard.writeText(shareLink.value); copyBtn.textContent = "Kopiert!"; setTimeout(()=>copyBtn.textContent="Kopieren", 1500);}catch{}
-});
-overlay.addEventListener("click", (e)=>{ if(e.target === overlay) closeQR(); });
-
-// ===== Export =====
+// Export
 document.getElementById("downloadJson").addEventListener("click", ()=>{
   const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
   const url = URL.createObjectURL(blob);
@@ -774,14 +709,15 @@ document.getElementById("downloadJson").addEventListener("click", ()=>{
   setTimeout(()=>URL.revokeObjectURL(url), 1500);
 });
 
-// ===== Boot =====
+// Boot
 (async function boot(){
+  // Show first-run overlay (non-public)
+  maybeShowTokenOverlay();
   const data = await serverLoad();
   if(data){ state = data; } else if(USE_LOCAL_CACHE){ state = loadLocal(); } else { state = {}; }
   ensureState(); if(USE_LOCAL_CACHE) saveLocal(state);
   renderSchedule(); updateTables(); renderKO(); updateKPIs(); renderAdmin();
-  if(ADMIN_TOKEN && !VIEW_PUBLIC){ setSyncStatus("🔓 Admin‑Token gesetzt – Server‑Speichern aktiv", "ok"); }
-  else { setSyncStatus("🔒 Nur Lesen (Zuschauermodus oder kein Token)", ""); }
+  setSyncStatus(ADMIN_TOKEN? "🔓 Admin‑Token gesetzt – Server‑Speichern aktiv" : "🔒 Nur Lesen – ohne Token", ADMIN_TOKEN? "ok" : "");
 })();
 </script>
 </body>
